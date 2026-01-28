@@ -40,8 +40,8 @@ local function styleBtn(btn, text, color, pos)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 end
 
-styleBtn(mBtn, "🌅 琥珀清晨", Color3.fromRGB(255, 150, 50), UDim2.new(0.1, 0, 0.35, 0))
-styleBtn(nBtn, "🌌 奇幻星空", Color3.fromRGB(120, 80, 220), UDim2.new(0.1, 0, 0.65, 0))
+styleBtn(mBtn, "🌅 清晨光影", Color3.fromRGB(255, 150, 50), UDim2.new(0.1, 0, 0.35, 0))
+styleBtn(nBtn, "🌌 晚間光影", Color3.fromRGB(120, 80, 220), UDim2.new(0.1, 0, 0.65, 0))
 
 -- 2. 核心功能：紫色星空與光影
 local function apply(mode)
