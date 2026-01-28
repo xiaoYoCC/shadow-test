@@ -19,7 +19,7 @@ stroke.Transparency = 0.6
 
 local title = Instance.new("TextLabel", f)
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "🌿 MC 風格渲染"
+title.Text = "暖色渲染"
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 17
@@ -36,8 +36,8 @@ local function styleBtn(btn, text, color, pos)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
 end
 
-styleBtn(mBtn, "☀ 柔和白晝", Color3.fromRGB(100, 180, 255), UDim2.new(0.075, 0, 0.35, 0))
-styleBtn(nBtn, "🌌 夢幻星雲", Color3.fromRGB(160, 100, 255), UDim2.new(0.075, 0, 0.65, 0))
+styleBtn(mBtn, "☀ 白晝", Color3.fromRGB(100, 180, 255), UDim2.new(0.075, 0, 0.35, 0))
+styleBtn(nBtn, "🌌 黑夜", Color3.fromRGB(160, 100, 255), UDim2.new(0.075, 0, 0.65, 0))
 
 -- 2. Minecraft 風格平衡參數
 local function applyMCShader(mode)
