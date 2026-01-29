@@ -17,7 +17,7 @@ local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
--- [[ 極致渲染引擎 ]]
+-- [[ 渲染引擎優化 - 解決綠霧問題 ]]
 local function getEff(cl, nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
@@ -36,64 +36,25 @@ local function apply()
     local isDay = (curMode == "day")
     local t = isDay and {
         CT = 14.5, B = 3, E = 0.1, C = 0.2, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
-        Dens = 0.3, Bloom = 0.5, Sun = 0.25, DoF = 5, Sdw = true, Dif = 1, Spec = 1
+        Dens = 0.2, Bloom = 0.5, Sun = 0.2, DoF = 5, Sdw = true, Dif = 1, Spec = 1
     } or {
-        CT = 0, B = 2.2, E = 0.15, C = 0.3, S = 0.35, Tint = Color3.fromRGB(210, 220, 255),
-        Dens = 0.35, Bloom = 1.2, Sun = 0, DoF = 8, Sdw = true, Dif = 0.7, Spec = 1.5
+        CT = 0, B = 2.2, E = 0.15, C = 0.3, S = 0.3, Tint = Color3.fromRGB(210, 220, 255),
+        Dens = 0.25, Bloom = 1.0, Sun = 0, DoF = 8, Sdw = true, Dif = 0.7, Spec = 1.5
     }
 
-    local ti = TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    Lighting.GlobalShadows = t.Sdw
+    local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    
+    -- 修正大氣效果：降低 Haze 解決綠霧
+    Atm.Color = t.Tint
+    Atm.Decay = t.Tint
+    
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E, EnvironmentDiffuseScale=t.Dif, EnvironmentSpecularScale=t.Spec}):Play()
     TweenService:Create(CC, ti, {Contrast=t.C, Saturation=t.S, TintColor=t.Tint}):Play()
-    TweenService:Create(Atm, ti, {Density=t.Dens, Haze=t.Dens*1.5}):Play()
-    TweenService:Create(Bloom, ti, {Intensity=t.Bloom, Threshold=0.7}):Play()
+    TweenService:Create(Atm, ti, {Density=t.Dens, Haze=0.1}):Play() -- 鎖定低 Haze 防止綠色迷霧
+    TweenService:Create(Bloom, ti, {Intensity=t.Bloom, Threshold=0.8}):Play()
     TweenService:Create(SunRays, ti, {Intensity=t.Sun}):Play()
     TweenService:Create(DoF, ti, {FarIntensity=0.1, FocusDistance=25, InFocusRadius=t.DoF}):Play()
     Sky.Enabled = not isDay
-end
-
--- [[ 通知系統 ]]
-local activeNotifications = {}
-local function notify(msg)
-    local nF = Instance.new("Frame", sg)
-    nF.ZIndex, nF.Size, nF.Position = 1005, UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(1,1,1), 0.66
-    nF.BorderSizePixel = 0
-    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,8)
-    Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
-
-    local nL = Instance.new("TextLabel", nF)
-    nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
-    nL.TextColor3, nL.TextSize, nL.Font = Color3.new(0,0,0), 15, Enum.Font.GothamBold
-
-    local barBG = Instance.new("Frame", nF)
-    barBG.Size, barBG.Position = UDim2.new(1, -16, 0, 4), UDim2.new(0, 8, 1, -8)
-    barBG.BackgroundColor3, barBG.BackgroundTransparency = Color3.new(0,0,0), 0.8
-    barBG.ClipsDescendants = true
-    Instance.new("UICorner", barBG).CornerRadius = UDim.new(1,0)
-    
-    local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3 = UDim2.new(1, 0, 1, 0), Color3.fromRGB(150,150,150)
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
-
-    table.insert(activeNotifications, nF)
-    local function updatePositions()
-        local valid = {}
-        for _, v in ipairs(activeNotifications) do if v and v.Parent then table.insert(valid, v) end end
-        for i, v in ipairs(valid) do
-            v:TweenPosition(UDim2.new(1, -240, 0.8, -(#valid - i) * 65), "Out", "Quart", 0.3, true)
-        end
-    end
-    updatePositions()
-
-    local t = TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size = UDim2.new(0,0,1,0)})
-    t:Play()
-    t.Completed:Connect(function()
-        for i, v in ipairs(activeNotifications) do if v == nF then table.remove(activeNotifications, i) break end end
-        nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, nF.Position.Y.Offset), "In", "Quart", 0.3, true)
-        task.wait(0.3) nF:Destroy() updatePositions()
-    end)
 end
 
 -- [[ UI 構建 ]]
@@ -104,11 +65,7 @@ frame.Active, frame.Draggable = true, true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,22)
 Instance.new("UIStroke", frame).Color = Color3.fromRGB(200,160,255)
 
-local title = Instance.new("TextLabel", frame)
-title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0), 1
-title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, Enum.Font.GothamBold, 16, Color3.new(1,1,1)
-title.TextXAlignment = Enum.TextXAlignment.Left
-
+-- 小點：位置固定在主視窗左側平行位子
 local res = Instance.new("TextButton", sg)
 res.Size, res.Visible, res.Text = UDim2.new(0,55,0,55), false, cfg.emo
 res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(20,20,20), 0.2
@@ -117,21 +74,21 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
+-- [[ 修正後的平行切換邏輯 ]]
 local function showMain()
-    local tx, ty = res.AbsolutePosition.X - (res.Size.X.Offset/2) + 27, res.AbsolutePosition.Y - (res.Size.Y.Offset/2) + 27
-    frame.Position = UDim2.new(0, tx, 0, ty)
-    frame.Visible, res.Visible = true, false
-    notify("選單已恢復")
+    frame.Visible = true
+    res.Visible = false
 end
 
 local function hideMain()
-    local fPos = frame.AbsolutePosition
-    -- 調低位子：在 Y 軸加上 50 偏移量
-    res.Position = UDim2.new(0, fPos.X - (res.Size.X.Offset / 2), 0, fPos.Y - (res.Size.Y.Offset / 2) + 50)
-    frame.Visible, res.Visible = false, true
-    notify("選單已縮小")
+    -- 同步小點位子到主視窗左側，不再越開越偏
+    local fPos = frame.Position
+    res.Position = UDim2.new(fPos.X.Scale, fPos.X.Offset - 70, fPos.Y.Scale, fPos.Y.Offset + 75)
+    frame.Visible = false
+    res.Visible = true
 end
 
+-- [其餘按鈕與功能維持不變...]
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
@@ -161,13 +118,11 @@ end
 
 mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
     curMode = "day"
-    notify("成功套用：早晨模式")
     apply()
 end)
 
 mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
     curMode = "night"
-    notify("成功套用：黑夜模式")
     apply()
 end)
 
@@ -177,8 +132,7 @@ mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem 
     player:SetAttribute("ShaderRemember", rem)
     mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
-    notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
 end)
 
 task.spawn(function() while running and sg.Parent do apply() task.wait(3) end end)
-if rem then task.wait(0.5) apply() end
+if rem then apply() end
