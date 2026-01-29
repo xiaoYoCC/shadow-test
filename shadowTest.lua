@@ -1,13 +1,14 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 local cfg = {
     type = "Emoji",
     id   = "rbxassetid://13511162985",
     emo  = "👾",
-    size = 24,
+    size = 32,
     name = "✨ xiaoYo 閃避渲染"
 }
 
@@ -17,8 +18,29 @@ local running, curMode, rem = true, player:GetAttribute("ShaderMode") or "day", 
 local sg = Instance.new("ScreenGui", CoreGui)
 sg.Name = "xiaoYo_ShaderUI"
 
+local function notify(msg, col)
+    local nF = Instance.new("Frame", sg)
+    nF.Size, nF.Position = UDim2.new(0, 200, 0, 45), UDim2.new(1, 50, 0.9, 0)
+    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.fromRGB(30,30,30), 0.2
+    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,8)
+    local nL = Instance.new("TextLabel", nF)
+    nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,-10,1,-5), 1, msg
+    nL.TextColor3, nL.Font, nL.TextSize = Color3.new(1,1,1), 17, 14
+    local bar = Instance.new("Frame", nF)
+    bar.Size, bar.Position = UDim2.new(1,0,0,3), UDim2.new(0,0,1,-3)
+    bar.BackgroundColor3, bar.BorderSizePixel = col, 0
+    Instance.new("UICorner", bar)
+    TweenService:Create(nF, TweenInfo.new(0.4, 4), {Position=UDim2.new(1,-220,0.9,0)}):Play()
+    local t = TweenService:Create(bar, TweenInfo.new(2, 0), {Size=UDim2.new(0,0,0,3)})
+    t:Play()
+    t.Completed:Connect(function()
+        TweenService:Create(nF, TweenInfo.new(0.4, 3), {Position=UDim2.new(1,50,0.9,0)}):Play()
+        task.wait(0.4) nF:Destroy()
+    end)
+end
+
 local frame = Instance.new("Frame", sg)
-frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(1, -270, 0.5, -105)
+frame.Size, frame.Position = UDim2.new(0,250,0,210), UDim2.new(1,-270,0.5,-105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(22,22,22), 0.35
 frame.Active, frame.Draggable = true, true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,22)
@@ -26,7 +48,7 @@ Instance.new("UIStroke", frame).Transparency = 0.6
 
 local title = Instance.new("TextLabel", frame)
 title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0), 1
-title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, "GothamBold", 16, Color3.new(1,1,1)
+title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, 10, 16, Color3.new(1,1,1)
 title.TextXAlignment = 0
 
 local res = Instance.new("ImageButton", sg)
@@ -37,14 +59,14 @@ Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
 
 if cfg.type == "Image" then res.Image = cfg.id else
     local l = Instance.new("TextLabel", res)
-    l.Size, l.BackgroundTransparency, l.Text, l.TextSize = UDim2.new(1,0,1,0), 1, cfg.emo, cfg.size
+    l.Size, l.BackgroundTransparency, l.Text, l.TextScaled = UDim2.new(1,0,1,0), 1, cfg.emo, true
     l.TextColor3 = Color3.new(1,1,1)
 end
 
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
-    b.TextColor3 = Color3.new(1,1,1)
+    b.TextColor3, b.Font = Color3.new(1,1,1), 10
     Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
     b.MouseButton1Click:Connect(cb)
 end
@@ -55,14 +77,11 @@ headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
 end)
 
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
-    running = false
-    sg:Destroy()
+    running = false sg:Destroy()
 end)
 
 local dStart
-res.InputBegan:Connect(function(input)
-    if input.UserInputType.Value == 0 or input.UserInputType.Value == 7 then dStart = res.AbsolutePosition end
-end)
+res.InputBegan:Connect(function(i) if i.UserInputType.Value == 0 or i.UserInputType.Value == 7 then dStart = res.AbsolutePosition end end)
 res.MouseButton1Up:Connect(function()
     if dStart and (dStart - res.AbsolutePosition).Magnitude < 10 then
         frame.Position = res.Position
@@ -85,8 +104,8 @@ local function apply()
     local s = (curMode=="day") and dS or nS
     if math.abs(Lighting.ClockTime - s.CT) > 0.05 then Lighting.ClockTime = s.CT end
     Lighting.Brightness = s.B
-    Lighting.GlobalShadows = (curMode == "night")
-    Lighting.Technology = (curMode == "day") and 3 or 2
+    Lighting.GlobalShadows = (curMode=="night")
+    Lighting.Technology = (curMode=="day") and 3 or 2
     CC.Contrast, CC.Saturation, CC.TintColor = s.C, s.S, s.T
     Atm.Density, Sky.Enabled = s.AD, (curMode=="night")
     if curMode=="night" then
@@ -98,4 +117,30 @@ end
 local function mainBtn(txt, col, pos, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
-    b.Font, b.TextColor3, b.BackgroundTransparency = "GothamMedium", Color3.new(1,1,1), 0.
+    b.Font, b.TextColor3, b.BackgroundTransparency = 17, Color3.new(1,1,1), 0.25
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+    b.MouseButton1Click:Connect(cb)
+    return b
+end
+
+mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
+    curMode = "day" player:SetAttribute("ShaderMode","day") apply()
+    notify("已切換：早晨模式", Color3.fromRGB(120,190,255))
+end)
+
+mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
+    curMode = "night" player:SetAttribute("ShaderMode","night") apply()
+    notify("已切換：黑夜模式", Color3.fromRGB(160,110,255))
+end)
+
+local mBtn
+mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
+    rem = not rem
+    player:SetAttribute("ShaderRemember", rem)
+    mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
+    mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
+    notify(rem and "記憶模式：開啟" or "記憶模式：關閉", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(200,200,200))
+end)
+
+task.spawn(function() while running do apply() task.wait(2) end end)
+if rem then task.wait(0.5) apply() end
