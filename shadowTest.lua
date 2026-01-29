@@ -4,7 +4,7 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
 local cfg = {
-    emo  = "🌌",
+    emo  = "👾",
     size = 24,
     name = "✨ xiaoYo 閃避渲染",
     milkyWay = {
@@ -17,7 +17,6 @@ local cfg = {
     }
 }
 
--- 清理舊 UI
 local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
@@ -39,8 +38,8 @@ local CC = getEff("ColorCorrectionEffect", "x_CC")
 local Atm = getEff("Atmosphere", "x_Atm")
 local Bloom = getEff("BloomEffect", "x_Bloom")
 
--- 處理銀河與天空盒
 local function applySky(isNight)
+    -- 強力清理其他 Sky
     for _, v in ipairs(Lighting:GetChildren()) do
         if v:IsA("Sky") and v.Name ~= "x_Sky" then v:Destroy() end
     end
@@ -48,9 +47,11 @@ local function applySky(isNight)
     if isNight then
         s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = cfg.milkyWay.SkyboxBk, cfg.milkyWay.SkyboxDn, cfg.milkyWay.SkyboxFt
         s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = cfg.milkyWay.SkyboxLf, cfg.milkyWay.SkyboxRt, cfg.milkyWay.SkyboxUp
+        s.CelestialBodiesShown = false -- 關閉原本的太陽月亮，防空缺
     else
         s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = "", "", ""
         s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = "", "", ""
+        s.CelestialBodiesShown = true
     end
 end
 
@@ -64,13 +65,12 @@ local function apply()
         Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
     } or {
         CT = 0, B = 2.5, E = 0.15, C = 0.2, S = 0.3, Tint = Color3.fromRGB(200, 210, 255),
-        Dens = 0.02, Amb = Color3.fromRGB(40, 40, 55)
+        Dens = 0.01, Amb = Color3.fromRGB(40, 40, 55)
     }
 
     local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
     Lighting.Ambient = t.Amb
     Lighting.OutdoorAmbient = t.Amb
-
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
     TweenService:Create(CC, ti, {Contrast=t.C, Saturation=t.S, TintColor=t.Tint}):Play()
     TweenService:Create(Atm, ti, {Density=t.Dens}):Play()
@@ -78,7 +78,6 @@ local function apply()
 end
 
 -- [[ 通知系統 ]]
-local activeNotifications = {}
 local function notify(msg)
     local isDay = (curMode == "day")
     local nF = Instance.new("Frame", sg)
@@ -87,33 +86,14 @@ local function notify(msg)
     nF.BackgroundTransparency = 0.2
     Instance.new("UICorner", nF).CornerRadius = UDim.new(0,10)
     Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
-
     local nL = Instance.new("TextLabel", nF)
     nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
     nL.TextColor3 = isDay and Color3.new(0,0,0) or Color3.new(1,1,1)
     nL.TextSize, nL.Font = 15, Enum.Font.GothamBold
-
-    local barBG = Instance.new("Frame", nF)
-    barBG.Size, barBG.Position = UDim2.new(1,-16,0,4), UDim2.new(0,8,1,-8)
-    barBG.BackgroundColor3, barBG.ClipsDescendants = Color3.new(0,0,0), true
-    Instance.new("UICorner", barBG)
-    local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3 = UDim2.new(1,0,1,0), Color3.fromRGB(150,150,150)
-    Instance.new("UICorner", bar)
-
-    table.insert(activeNotifications, nF)
-    local function updatePos()
-        for i, v in ipairs(activeNotifications) do
-            v:TweenPosition(UDim2.new(1, -240, 0.8, -(#activeNotifications - i) * 65), "Out", "Quart", 0.3, true)
-        end
-    end
-    updatePos()
-
-    TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)}):Play()
+    nF:TweenPosition(UDim2.new(1, -240, 0.8, 0), "Out", "Quart", 0.3, true)
     task.delay(2.5, function()
-        for i, v in ipairs(activeNotifications) do if v == nF then table.remove(activeNotifications, i) break end end
-        nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, nF.Position.Y.Offset), "In", "Quart", 0.3, true)
-        task.wait(0.3) nF:Destroy() updatePos()
+        nF:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quart", 0.3, true)
+        task.wait(0.3) nF:Destroy()
     end)
 end
 
@@ -138,21 +118,33 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 平行位移核心邏輯 ]]
+-- [[ 位移與防誤觸邏輯 ]]
+local dragging = false
+res.MouseButton1Down:Connect(function() dragging = false end)
+res.Changed:Connect(function(p) if p == "Position" then dragging = true end end)
+
 local function showMain()
-    local x = res.AbsolutePosition.X - (250/2) + (55/2)
-    local y = res.AbsolutePosition.Y - (210/2) + (55/2)
-    frame.Position = UDim2.new(0, x + 97, 0, y + 77)
+    if dragging then return end
+    -- 精確計算還原坐標：對齊小點到視窗左上角外部
+    local fX = res.AbsolutePosition.X + 65
+    local fY = res.AbsolutePosition.Y - 10
+    frame.Position = UDim2.new(0, fX, 0, fY)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
 end
 
 local function hideMain()
     local fPos = frame.AbsolutePosition
-    res.Position = UDim2.new(0, fPos.X + 97, 0, fPos.Y - 10) 
+    -- 設置小點出現在主視窗左上角外部 (-65像素)
+    res.Position = UDim2.new(0, fPos.X - 65, 0, fPos.Y + 10)
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end
+
+res.MouseButton1Up:Connect(function()
+    task.wait(0.05)
+    if not dragging then showMain() end
+end)
 
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
@@ -165,7 +157,6 @@ end
 
 headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), hideMain)
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function() running = false sg:Destroy() end)
-res.MouseButton1Click:Connect(showMain)
 
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
@@ -176,7 +167,6 @@ local function mainBtn(txt,col,pos,cb)
     return b
 end
 
--- [[ 模式按鈕 ]]
 mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
     curMode = "day"
     player:SetAttribute("ShaderMode", "day")
@@ -191,7 +181,6 @@ mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,
     apply()
 end)
 
--- [[ 記憶模式按鈕 ]]
 local mBtn
 mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
     rem = not rem
@@ -201,7 +190,6 @@ mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem 
     notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
 end)
 
--- [[ 自動套用記憶模式 ]]
 if rem and player:GetAttribute("ShaderMode") then
     curMode = player:GetAttribute("ShaderMode")
     apply()
