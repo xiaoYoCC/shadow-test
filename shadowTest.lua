@@ -1,68 +1,63 @@
---[[ ✨ xiaoYo 閃避渲染 ✨ ]]
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 local cfg = {
-    type = "Emoji", -- "Emoji" 或 "Image"
-    id   = "rbxassetid://13511162985",
+    type = "Emoji",
     emo  = "👾",
-    size = 16,
+    size = 24,
     name = "✨ xiaoYo 閃避渲染"
 }
 
--- 移除舊的 UI
-if player:FindFirstChild("PlayerGui") then
-    if player.PlayerGui:FindFirstChild("xiaoYo_ShaderUI") then
-        player.PlayerGui.xiaoYo_ShaderUI:Destroy()
-    end
-end
+-- 清除舊 UI
+local pGui = player:WaitForChild("PlayerGui")
+if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
-local running = true
-local curMode = player:GetAttribute("ShaderMode") or "day"
-local rem = player:GetAttribute("ShaderRemember") or false
+local running, curMode, rem = true, player:GetAttribute("ShaderMode") or "day", player:GetAttribute("ShaderRemember") or false
+local sg = Instance.new("ScreenGui", pGui)
+sg.Name, sg.ResetOnSpawn = "xiaoYo_ShaderUI", false
 
--- 創建 ScreenGui
-local sg = Instance.new("ScreenGui")
-sg.Name = "xiaoYo_ShaderUI"
-sg.ResetOnSpawn = false
-sg.Parent = player:WaitForChild("PlayerGui")
-
---[[ 通知系統 ]]
+-- [[ 強制修復版通知系統 ]]
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
     nF.Size, nF.Position = UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.fromRGB(0,0,0), 0.4
+    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(0,0,0), 0.4
     nF.BorderSizePixel = 0
     Instance.new("UICorner", nF).CornerRadius = UDim.new(0,6)
+    
     local stroke = Instance.new("UIStroke", nF)
     stroke.Color, stroke.Thickness = Color3.fromRGB(160,110,255), 2
 
     local nL = Instance.new("TextLabel", nF)
-    nL.Size, nL.BackgroundTransparency = UDim2.new(1,0,1,-5), 1
-    nL.Text = msg
-    nL.TextColor3 = Color3.new(1,1,1)
+    nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
+    nL.TextColor3, nL.TextSize = Color3.new(1,1,1), 15
     nL.Font = Enum.Font.GothamMedium
-    nL.TextSize = 15
 
     local barBG = Instance.new("Frame", nF)
     barBG.Size, barBG.Position = UDim2.new(1,0,0,4), UDim2.new(0,0,1,-4)
-    barBG.BackgroundColor3, barBG.BorderSizePixel = Color3.fromRGB(0,0,0), 0
+    barBG.BackgroundColor3, barBG.BorderSizePixel = Color3.new(0,0,0), 0
+    
     local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(0,0,0), 0
+    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(80,80,80), 0 -- 改成灰色才看得見進度
+    Instance.new("UICorner", bar)
 
-    TweenService:Create(nF, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(1, -240, 0.8, 0)}):Play()
+    -- 彈入動畫
+    nF:TweenPosition(UDim2.new(1, -240, 0.8, 0), "Out", "Back", 0.5, true)
+    
+    -- 進度條倒數 (2.5秒)
     local t = TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size = UDim2.new(0,0,1,0)})
     t:Play()
+
     t.Completed:Connect(function()
-        TweenService:Create(nF, TweenInfo.new(0.5, Enum.EasingStyle.QuadIn), {Position = UDim2.new(1,50,0.8,0)}):Play()
-        task.wait(0.5)
-        nF:Destroy()
+        -- 彈出並消失
+        nF:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quad", 0.5, true, function()
+            nF:Destroy()
+        end)
     end)
 end
 
---[[ 主 UI ]]
+-- [[ 主介面保持不變 ]]
 local frame = Instance.new("Frame", sg)
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(1, -270, 0.5, -105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(22,22,22), 0.35
@@ -71,30 +66,20 @@ Instance.new("UICorner", frame).CornerRadius = UDim.new(0,22)
 Instance.new("UIStroke", frame).Transparency = 0.6
 
 local title = Instance.new("TextLabel", frame)
-title.Size, title.Position = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0)
-title.BackgroundTransparency = 1
-title.Text = cfg.name
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.TextColor3 = Color3.new(1,1,1)
+title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0), 1
+title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, Enum.Font.GothamBold, 16, Color3.new(1,1,1)
 title.TextXAlignment = Enum.TextXAlignment.Left
 
--- 縮小按鈕
 local res = Instance.new("ImageButton", sg)
 res.Size, res.Visible, res.Active, res.Draggable = UDim2.new(0,55,0,55), false, true, true
 res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(30,30,30), 0.2
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
-if cfg.type == "Image" then
-    res.Image = cfg.id
-else
-    local l = Instance.new("TextLabel", res)
-    l.Size, l.BackgroundTransparency, l.Text, l.TextSize = UDim2.new(1,0,1,0), 1, cfg.emo, cfg.size
-    l.TextColor3 = Color3.new(1,1,1)
-    l.Font = Enum.Font.GothamBold
-end
 
---[[ 功能按鈕 ]]
+local l = Instance.new("TextLabel", res)
+l.Size, l.BackgroundTransparency, l.Text, l.TextSize = UDim2.new(1,0,1,0), 1, cfg.emo, cfg.size
+l.TextColor3 = Color3.new(1,1,1)
+
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
@@ -109,26 +94,9 @@ headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
 end)
 
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
-    running = false
-    sg:Destroy()
+    running = false sg:Destroy()
 end)
 
--- 拖曳回復
-local dStart
-res.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        dStart = res.AbsolutePosition
-    end
-end)
-res.MouseButton1Up:Connect(function()
-    if dStart and (dStart - res.AbsolutePosition).Magnitude < 10 then
-        frame.Position = res.Position
-        frame.Visible, res.Visible = true, false
-    end
-    dStart = nil
-end)
-
---[[ 渲染邏輯 ]]
 local function getEff(cl,nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
@@ -142,56 +110,45 @@ local function apply()
     if not running then return end
     local CC, Atm, Sky = getEff("ColorCorrectionEffect","x_CC"), getEff("Atmosphere","x_Atm"), getEff("Sky","x_Sky")
     local s = (curMode=="day") and dS or nS
-    if math.abs(Lighting.ClockTime - s.CT) > 0.05 then Lighting.ClockTime = s.CT end
-    Lighting.Brightness = s.B
-    Lighting.GlobalShadows = (curMode=="night")
+    Lighting.ClockTime = s.CT
+    Lighting.Brightness, Lighting.GlobalShadows = s.B, (curMode=="night")
     Lighting.Technology = (curMode=="day") and Enum.Technology.Classic or Enum.Technology.Compatibility
     CC.Contrast, CC.Saturation, CC.TintColor = s.C, s.S, s.T
     Atm.Density, Sky.Enabled = s.AD, (curMode=="night")
-    if curMode=="night" then
-        local g = "rbxassetid://600830446"
-        Sky.SkyboxBk, Sky.SkyboxDn, Sky.SkyboxFt, Sky.SkyboxLf, Sky.SkyboxRt, Sky.SkyboxUp, Sky.StarIntensity = g,g,g,g,g,g,6
-    end
 end
 
---[[ 主按鈕生成 ]]
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
-    b.TextColor3 = Color3.new(1,1,1)
-    b.Font, b.BackgroundTransparency = Enum.Font.GothamMedium, 0.25
+    b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.25
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
     b.MouseButton1Click:Connect(cb)
     return b
 end
 
 mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
-    curMode = "day"
+    notify("成功套用：早晨模式")
+    curMode = "day" 
     player:SetAttribute("ShaderMode","day")
     apply()
-    notify("成功套用：早晨模式")
 end)
 
 mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
-    curMode = "night"
+    notify("成功套用：黑夜模式")
+    curMode = "night" 
     player:SetAttribute("ShaderMode","night")
     apply()
-    notify("成功套用：黑夜模式")
 end)
 
 local mBtn
-mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF",
-    rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120),
-    UDim2.new(0.07,0,0.68,0),
-    function()
-        rem = not rem
-        player:SetAttribute("ShaderRemember", rem)
-        mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
-        mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
-        notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
+mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
+    rem = not rem
+    player:SetAttribute("ShaderRemember", rem)
+    mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
+    mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
+    notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
 end)
 
---[[ 循環套用 ]]
 task.spawn(function()
     while running and sg.Parent do
         apply()
@@ -199,7 +156,4 @@ task.spawn(function()
     end
 end)
 
-if rem then
-    task.wait(0.5)
-    apply()
-end
+if rem then task.wait(0.5) apply() end
