@@ -20,12 +20,10 @@ sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
 -- [[ 通知管理系統 ]]
 local activeNotifications = {}
-
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
     nF.ZIndex = 1005
     nF.Size = UDim2.new(0, 220, 0, 50)
-    -- 初始位置在畫面外右側
     nF.Position = UDim2.new(1, 50, 0.8, 0)
     nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(0,0,0), 0.2
     nF.BorderSizePixel = 0
@@ -46,37 +44,25 @@ local function notify(msg)
     bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(100,100,100), 0
     Instance.new("UICorner", bar)
 
-    -- 將新通知加入追蹤清單
     table.insert(activeNotifications, nF)
-
-    -- 更新所有通知位置的函數
     local function updatePositions()
         for i, v in ipairs(activeNotifications) do
-            local targetY = 0.8 - ((#activeNotifications - i) * 0.08) -- 每個通知間隔 0.08 的高度
+            local targetY = 0.8 - ((#activeNotifications - i) * 0.12) 
             v:TweenPosition(UDim2.new(1, -240, targetY, 0), "Out", "Quart", 0.3, true)
         end
     end
-
     updatePositions()
 
-    -- 進度條動畫
     local t = TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size = UDim2.new(0,0,1,0)})
     t:Play()
-
     t.Completed:Connect(function()
-        -- 從清單移除
         for i, v in ipairs(activeNotifications) do
-            if v == nF then
-                table.remove(activeNotifications, i)
-                break
-            end
+            if v == nF then table.remove(activeNotifications, i) break end
         end
-        
-        -- 退場動畫
-        local outTween = nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, 0), "In", "Quart", 0.3, true)
+        nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, 0), "In", "Quart", 0.3, true)
         task.wait(0.3)
         nF:Destroy()
-        updatePositions() -- 遞補空缺
+        updatePositions()
     end)
 end
 
@@ -106,7 +92,7 @@ Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 local rStroke = Instance.new("UIStroke", res)
 rStroke.Color, rStroke.Thickness = Color3.fromRGB(200, 160, 255), 2
 
--- 拖動與恢復邏輯
+-- [[ 恢復邏輯 - 讓 "-" 按鈕對準小點 ]]
 local dragStartPos
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 
@@ -117,7 +103,11 @@ res.MouseButton1Up:Connect(function()
         if (dragEndPos - dragStartPos).Magnitude > 8 then isClick = false end
     end
     if isClick then
-        frame.Position = UDim2.new(0, res.AbsolutePosition.X - (frame.Size.X.Offset/2) + (res.Size.X.Offset/2), 0, res.AbsolutePosition.Y)
+        -- 計算主視窗位置，使其中的縮小按鈕(位置在 1,-60,0,9) 剛好重疊在小點的位置
+        local targetX = res.AbsolutePosition.X - (frame.Size.X.Offset - 60) + (res.Size.X.Offset/2) - 11
+        local targetY = res.AbsolutePosition.Y - 9 + (res.Size.Y.Offset/2) - 11
+        
+        frame.Position = UDim2.new(0, targetX, 0, targetY)
         frame.Visible, res.Visible = true, false
         notify("選單已恢復")
     end
@@ -130,10 +120,16 @@ local function headBtn(txt, pos, col, cb)
     b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
     b.MouseButton1Click:Connect(cb)
+    return b
 end
 
-headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
-    res.Position = UDim2.new(0, frame.AbsolutePosition.X + (frame.Size.X.Offset/2) - 27, 0, frame.AbsolutePosition.Y + (frame.Size.Y.Offset/2) - 27)
+-- 取得縮小按鈕的參照
+local minBtn = headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
+    -- [[ 縮小邏輯 - 小點疊在 "-" 按鈕上 ]]
+    local btnPos = minBtn.AbsolutePosition
+    -- 讓 55x55 的小點中心對準 22x22 的按鈕中心
+    res.Position = UDim2.new(0, btnPos.X - (res.Size.X.Offset/2) + 11, 0, btnPos.Y - (res.Size.Y.Offset/2) + 11)
+    
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end)
@@ -145,7 +141,7 @@ headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
     sg:Destroy()
 end)
 
--- [[ 渲染控制 ]]
+-- [[ 渲染控制與按鈕生成 (保持不變) ]]
 local function getEff(cl,nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
