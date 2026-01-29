@@ -14,8 +14,6 @@ local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
 local running, curMode, rem = true, player:GetAttribute("ShaderMode") or "day", player:GetAttribute("ShaderRemember") or false
-
--- ScreenGui 層級設為最高
 local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
@@ -80,11 +78,27 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
 
--- 點擊回復邏輯：直接監聽 MouseButton1Click 確保必開
-res.MouseButton1Click:Connect(function()
-    frame.Visible = true
-    res.Visible = false
-    notify("選單已恢復")
+-- 拖動與恢復邏輯
+local dragStartPos
+res.MouseButton1Down:Connect(function()
+    dragStartPos = res.AbsolutePosition
+end)
+
+res.MouseButton1Up:Connect(function()
+    local dragEndPos = res.AbsolutePosition
+    local isClick = true
+    if dragStartPos then
+        local dist = (dragEndPos - dragStartPos).Magnitude
+        if dist > 8 then
+            isClick = false
+        end
+    end
+    
+    if isClick then
+        frame.Visible = true
+        res.Visible = false
+        notify("選單已恢復")
+    end
 end)
 
 local function headBtn(txt, pos, col, cb)
@@ -96,14 +110,21 @@ local function headBtn(txt, pos, col, cb)
     b.MouseButton1Click:Connect(cb)
 end
 
+-- 修改：縮小按鈕增加通知
 headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
-    res.Position = UDim2.new(0.5, -27, 0.85, 0)
+    if res.Position == UDim2.new(0,0,0,0) then
+        res.Position = UDim2.new(1, -70, 0.85, 0)
+    end
     frame.Visible = false
     res.Visible = true
+    notify("選單已縮小")
 end)
 
+-- 修改：關閉按鈕增加通知與延遲銷毀
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
+    notify("選單已關閉")
     running = false
+    task.wait(0.1) -- 稍微等待讓通知能觸發
     sg:Destroy()
 end)
 
