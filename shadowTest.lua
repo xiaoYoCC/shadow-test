@@ -76,9 +76,13 @@ Instance.new("UICorner", frame).CornerRadius = UDim.new(0,22)
 local fStroke = Instance.new("UIStroke", frame)
 fStroke.Color, fStroke.Thickness, fStroke.Transparency = Color3.fromRGB(200, 160, 255), 1.5, 0.4
 
+-- 這裡將文字顏色設定為純白
 local title = Instance.new("TextLabel", frame)
 title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0), 1
-title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, Enum.Font.GothamBold, 16, Color3.new(1,1,1)
+title.Text = cfg.name
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextColor3 = Color3.new(1, 1, 1) -- 純白色
 title.TextXAlignment = Enum.TextXAlignment.Left
 
 -- 縮小鈕 (👾)
@@ -92,7 +96,7 @@ Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 local rStroke = Instance.new("UIStroke", res)
 rStroke.Color, rStroke.Thickness = Color3.fromRGB(200, 160, 255), 2
 
--- [[ 恢復邏輯 - 讓 "-" 按鈕對準小點 ]]
+-- [[ 恢復邏輯 ]]
 local dragStartPos
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 
@@ -103,10 +107,8 @@ res.MouseButton1Up:Connect(function()
         if (dragEndPos - dragStartPos).Magnitude > 8 then isClick = false end
     end
     if isClick then
-        -- 計算主視窗位置，使其中的縮小按鈕(位置在 1,-60,0,9) 剛好重疊在小點的位置
         local targetX = res.AbsolutePosition.X - (frame.Size.X.Offset - 60) + (res.Size.X.Offset/2) - 11
         local targetY = res.AbsolutePosition.Y - 9 + (res.Size.Y.Offset/2) - 11
-        
         frame.Position = UDim2.new(0, targetX, 0, targetY)
         frame.Visible, res.Visible = true, false
         notify("選單已恢復")
@@ -123,13 +125,9 @@ local function headBtn(txt, pos, col, cb)
     return b
 end
 
--- 取得縮小按鈕的參照
 local minBtn = headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
-    -- [[ 縮小邏輯 - 小點疊在 "-" 按鈕上 ]]
     local btnPos = minBtn.AbsolutePosition
-    -- 讓 55x55 的小點中心對準 22x22 的按鈕中心
     res.Position = UDim2.new(0, btnPos.X - (res.Size.X.Offset/2) + 11, 0, btnPos.Y - (res.Size.Y.Offset/2) + 11)
-    
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end)
@@ -141,7 +139,7 @@ headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
     sg:Destroy()
 end)
 
--- [[ 渲染控制與按鈕生成 (保持不變) ]]
+-- [[ 渲染控制 ]]
 local function getEff(cl,nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
