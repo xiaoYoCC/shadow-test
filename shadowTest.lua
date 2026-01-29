@@ -150,7 +150,7 @@ end)
 local function hideMain()
     local fPos = frame.AbsolutePosition
     -- 小點平行位於主視窗左側 60 像素處
-    res.Position = UDim2.new(0, fPos.X - 60, 0, fPos.Y)
+    res.Position = UDim2.new(0, fPos.X - 50, 0, fPos.Y)
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end
@@ -158,7 +158,7 @@ end
 local function showMain()
     local rPos = res.AbsolutePosition
     -- 恢復時視窗從小點右側彈出
-    frame.Position = UDim2.new(0, rPos.X + 60, 0, rPos.Y)
+    frame.Position = UDim2.new(0, rPos.X + 50, 0, rPos.Y)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
 end
@@ -208,12 +208,12 @@ mainBtn("🌌 黑夜銀河", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0
 end)
 
 local mBtn
-mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
+mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
     rem = not rem
     player:SetAttribute("ShaderRemember", rem)
-    mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
+    mBtn.Text = rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF"
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
-    notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
+    notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
 
 if rem and player:GetAttribute("ShaderMode") then
