@@ -7,7 +7,7 @@ local cfg = {
     type = "Emoji",
     id   = "rbxassetid://13511162985",
     emo  = "👾",
-    size = "25",
+    size = 24,
     name = "✨ xiaoYo 閃避渲染"
 }
 
@@ -37,7 +37,8 @@ Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
 
 if cfg.type == "Image" then res.Image = cfg.id else
     local l = Instance.new("TextLabel", res)
-    l.Size, l.BackgroundTransparency, l.Text, l.TextScaled = UDim2.new(1,0,1,0), 1, cfg.emo, true
+    l.Size, l.BackgroundTransparency, l.Text, l.TextSize = UDim2.new(1,0,1,0), 1, cfg.emo, cfg.size
+    l.TextColor3 = Color3.new(1,1,1)
 end
 
 local function headBtn(txt, pos, col, cb)
@@ -83,11 +84,9 @@ local function apply()
     local CC, Atm, Sky = getEff("ColorCorrectionEffect","x_CC"), getEff("Atmosphere","x_Atm"), getEff("Sky","x_Sky")
     local s = (curMode=="day") and dS or nS
     if math.abs(Lighting.ClockTime - s.CT) > 0.05 then Lighting.ClockTime = s.CT end
-    
     Lighting.Brightness = s.B
     Lighting.GlobalShadows = (curMode == "night")
     Lighting.Technology = (curMode == "day") and 3 or 2
-    
     CC.Contrast, CC.Saturation, CC.TintColor = s.C, s.S, s.T
     Atm.Density, Sky.Enabled = s.AD, (curMode=="night")
     if curMode=="night" then
@@ -99,37 +98,4 @@ end
 local function mainBtn(txt, col, pos, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
-    b.Font, b.TextColor3, b.BackgroundTransparency = "GothamMedium", Color3.new(1,1,1), 0.25
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
-    b.MouseButton1Click:Connect(cb)
-    return b
-end
-
-mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
-    curMode = "day"
-    player:SetAttribute("ShaderMode", "day")
-    apply()
-end)
-
-mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
-    curMode = "night"
-    player:SetAttribute("ShaderMode", "night")
-    apply()
-end)
-
-local mBtn
-mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
-    rem = not rem
-    player:SetAttribute("ShaderRemember", rem)
-    mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
-    mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
-end)
-
-task.spawn(function()
-    while running do
-        apply()
-        task.wait(1.5)
-    end
-end)
-
-if rem then task.wait(0.5) apply() end
+    b.Font, b.TextColor3, b.BackgroundTransparency = "GothamMedium", Color3.new(1,1,1), 0.
