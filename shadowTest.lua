@@ -7,6 +7,7 @@ local cfg = {
     type = "Emoji",
     id   = "rbxassetid://13511162985",
     emo  = "👾",
+    size = "25",
     name = "✨ xiaoYo 閃避渲染"
 }
 
