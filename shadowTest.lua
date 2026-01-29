@@ -39,8 +39,8 @@ local function apply()
         CT = 14.5, B = 3, E = 0.1, C = 0.2, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
         Dens = 0.3, Bloom = 0.5, Sun = 0.25, DoF = 5, Sdw = true, Dif = 1, Spec = 1
     } or {
-        CT = 0, B = 1.5, E = -0.05, C = 0.35, S = 0.4, Tint = Color3.fromRGB(190, 200, 255),
-        Dens = 0.45, Bloom = 1.5, Sun = 0, DoF = 10, Sdw = true, Dif = 0.5, Spec = 1.5
+        CT = 0, B = 2.2, E = 0.15, C = 0.3, S = 0.35, Tint = Color3.fromRGB(210, 220, 255),
+        Dens = 0.35, Bloom = 1.2, Sun = 0, DoF = 8, Sdw = true, Dif = 0.7, Spec = 1.5
     }
 
     local ti = TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -54,7 +54,7 @@ local function apply()
     Sky.Enabled = not isDay
 end
 
--- [[ 通知系統 ]]
+-- [[ 通知系統 - 修復進度條凸出 ]]
 local activeNotifications = {}
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
@@ -68,11 +68,17 @@ local function notify(msg)
     nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
     nL.TextColor3, nL.TextSize, nL.Font = Color3.new(0,0,0), 15, Enum.Font.GothamBold
 
+    -- 進度條背景：開啟 ClipsDescendants 防止凸出
     local barBG = Instance.new("Frame", nF)
-    barBG.Size, barBG.Position, barBG.BackgroundColor3 = UDim2.new(1,0,0,4), UDim2.new(0,0,1,-4), Color3.new(0,0,0)
+    barBG.Size, barBG.Position = UDim2.new(1, -16, 0, 4), UDim2.new(0, 8, 1, -8)
+    barBG.BackgroundColor3, barBG.BackgroundTransparency = Color3.new(0,0,0), 0.8
+    barBG.BorderSizePixel = 0
+    barBG.ClipsDescendants = true -- 核心修正：裁切溢出部分
+    Instance.new("UICorner", barBG).CornerRadius = UDim.new(1,0)
+    
     local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3 = UDim2.new(1,0,1,0), Color3.fromRGB(150,150,150)
-    Instance.new("UICorner", bar)
+    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1, 0, 1, 0), Color3.fromRGB(150,150,150), 0
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
 
     table.insert(activeNotifications, nF)
     local function updatePositions()
