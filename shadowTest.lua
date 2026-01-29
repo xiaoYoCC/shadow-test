@@ -18,17 +18,21 @@ local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
--- [[ 通知系統 ]]
+-- [[ 通知管理系統 ]]
+local activeNotifications = {}
+
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
     nF.ZIndex = 1005
-    nF.Size, nF.Position = UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(0,0,0), 0.4
+    nF.Size = UDim2.new(0, 220, 0, 50)
+    -- 初始位置在畫面外右側
+    nF.Position = UDim2.new(1, 50, 0.8, 0)
+    nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(0,0,0), 0.2
     nF.BorderSizePixel = 0
-    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,6)
+    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,8)
     
     local stroke = Instance.new("UIStroke", nF)
-    stroke.Color, stroke.Thickness = Color3.fromRGB(160,110,255), 2
+    stroke.Color, stroke.Thickness = Color3.fromRGB(200, 160, 255), 2
 
     local nL = Instance.new("TextLabel", nF)
     nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
@@ -39,18 +43,40 @@ local function notify(msg)
     barBG.BackgroundColor3, barBG.BorderSizePixel = Color3.new(0,0,0), 0
     
     local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(180,180,180), 0
+    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(100,100,100), 0
     Instance.new("UICorner", bar)
 
-    nF:TweenPosition(UDim2.new(1, -240, 0.8, 0), "Out", "Back", 0.5, true)
-    
+    -- 將新通知加入追蹤清單
+    table.insert(activeNotifications, nF)
+
+    -- 更新所有通知位置的函數
+    local function updatePositions()
+        for i, v in ipairs(activeNotifications) do
+            local targetY = 0.8 - ((#activeNotifications - i) * 0.08) -- 每個通知間隔 0.08 的高度
+            v:TweenPosition(UDim2.new(1, -240, targetY, 0), "Out", "Quart", 0.3, true)
+        end
+    end
+
+    updatePositions()
+
+    -- 進度條動畫
     local t = TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size = UDim2.new(0,0,1,0)})
     t:Play()
 
     t.Completed:Connect(function()
-        nF:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quad", 0.5, true, function()
-            nF:Destroy()
-        end)
+        -- 從清單移除
+        for i, v in ipairs(activeNotifications) do
+            if v == nF then
+                table.remove(activeNotifications, i)
+                break
+            end
+        end
+        
+        -- 退場動畫
+        local outTween = nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, 0), "In", "Quart", 0.3, true)
+        task.wait(0.3)
+        nF:Destroy()
+        updatePositions() -- 遞補空缺
     end)
 end
 
@@ -58,10 +84,11 @@ end
 local frame = Instance.new("Frame", sg)
 frame.ZIndex = 1000
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(0.5, -125, 0.5, -105)
-frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(22,22,22), 0.35
+frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.3
 frame.Active, frame.Draggable = true, true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,22)
-Instance.new("UIStroke", frame).Transparency = 0.6
+local fStroke = Instance.new("UIStroke", frame)
+fStroke.Color, fStroke.Thickness, fStroke.Transparency = Color3.fromRGB(200, 160, 255), 1.5, 0.4
 
 local title = Instance.new("TextLabel", frame)
 title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40), UDim2.new(0,15,0,0), 1
@@ -72,31 +99,26 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 local res = Instance.new("TextButton", sg)
 res.ZIndex = 1001
 res.Size, res.Visible, res.Text = UDim2.new(0,55,0,55), false, cfg.emo
-res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(30,30,30), 0.2
+res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(20,20,20), 0.2
 res.TextColor3, res.TextSize = Color3.new(1,1,1), cfg.size
 res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
-Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
+local rStroke = Instance.new("UIStroke", res)
+rStroke.Color, rStroke.Thickness = Color3.fromRGB(200, 160, 255), 2
 
 -- 拖動與恢復邏輯
 local dragStartPos
-res.MouseButton1Down:Connect(function()
-    dragStartPos = res.AbsolutePosition
-end)
+res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 
 res.MouseButton1Up:Connect(function()
     local dragEndPos = res.AbsolutePosition
     local isClick = true
     if dragStartPos then
-        local dist = (dragEndPos - dragStartPos).Magnitude
-        if dist > 8 then
-            isClick = false
-        end
+        if (dragEndPos - dragStartPos).Magnitude > 8 then isClick = false end
     end
-    
     if isClick then
-        frame.Visible = true
-        res.Visible = false
+        frame.Position = UDim2.new(0, res.AbsolutePosition.X - (frame.Size.X.Offset/2) + (res.Size.X.Offset/2), 0, res.AbsolutePosition.Y)
+        frame.Visible, res.Visible = true, false
         notify("選單已恢復")
     end
 end)
@@ -110,21 +132,16 @@ local function headBtn(txt, pos, col, cb)
     b.MouseButton1Click:Connect(cb)
 end
 
--- 修改：縮小按鈕增加通知
 headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
-    if res.Position == UDim2.new(0,0,0,0) then
-        res.Position = UDim2.new(1, -70, 0.85, 0)
-    end
-    frame.Visible = false
-    res.Visible = true
+    res.Position = UDim2.new(0, frame.AbsolutePosition.X + (frame.Size.X.Offset/2) - 27, 0, frame.AbsolutePosition.Y + (frame.Size.Y.Offset/2) - 27)
+    frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end)
 
--- 修改：關閉按鈕增加通知與延遲銷毀
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
     notify("選單已關閉")
     running = false
-    task.wait(0.1) -- 稍微等待讓通知能觸發
+    task.wait(0.1)
     sg:Destroy()
 end)
 
@@ -139,19 +156,15 @@ local function apply()
     if not running then return end
     local CC = getEff("ColorCorrectionEffect","x_CC")
     local Atm = getEff("Atmosphere","x_Atm")
-    
+    local Sky = getEff("Sky","x_Sky")
     if curMode == "day" then
-        Lighting.ClockTime = 14
-        Lighting.Brightness = 2.0
-        Lighting.GlobalShadows = false
+        Lighting.ClockTime, Lighting.Brightness, Lighting.GlobalShadows = 14, 2.0, false
         CC.Contrast, CC.Saturation, CC.TintColor = 0.08, 0.14, Color3.fromRGB(255,245,235)
-        Atm.Density = 0.28
+        Atm.Density, Sky.Enabled = 0.28, false
     else
-        Lighting.ClockTime = 23.5
-        Lighting.Brightness = 1.4
-        Lighting.GlobalShadows = true
+        Lighting.ClockTime, Lighting.Brightness, Lighting.GlobalShadows = 23.5, 1.4, true
         CC.Contrast, CC.Saturation, CC.TintColor = 0.22, 0.35, Color3.fromRGB(215,205,255)
-        Atm.Density = 0.35
+        Atm.Density, Sky.Enabled = 0.35, true
     end
 end
 
