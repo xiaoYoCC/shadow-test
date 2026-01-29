@@ -200,7 +200,7 @@ mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0
     apply()
 end)
 
-mainBtn("🌌 黑夜銀河", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function()
+mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function()
     curMode = "night"
     player:SetAttribute("ShaderMode", "night")
     notify("成功套用：銀河模式")
