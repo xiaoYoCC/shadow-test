@@ -4,9 +4,17 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
 local cfg = {
-    emo  = "👾",
+    emo  = "🌌",
     size = 24,
-    name = "✨ xiaoYo 閃避渲染"
+    name = "✨ xiaoYo 閃避渲染",
+    milkyWay = {
+        SkyboxBk = "rbxassetid://159454299",
+        SkyboxDn = "rbxassetid://159454286",
+        SkyboxFt = "rbxassetid://159454293",
+        SkyboxLf = "rbxassetid://159454296",
+        SkyboxRt = "rbxassetid://159454282",
+        SkyboxUp = "rbxassetid://159454300"
+    }
 }
 
 -- 清理舊 UI
@@ -20,8 +28,8 @@ local rem = player:GetAttribute("ShaderRemember") or false
 local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 
--- [[ 渲染引擎 - 光影部分保持原樣 ]]
-local function getEff(cl,nm)
+-- [[ 渲染組件 ]]
+local function getEff(cl, nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
     return e
@@ -30,34 +38,43 @@ end
 local CC = getEff("ColorCorrectionEffect", "x_CC")
 local Atm = getEff("Atmosphere", "x_Atm")
 local Bloom = getEff("BloomEffect", "x_Bloom")
-local DoF = getEff("DepthOfFieldEffect", "x_DoF")
+
+-- 處理銀河與天空盒
+local function applySky(isNight)
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("Sky") and v.Name ~= "x_Sky" then v:Destroy() end
+    end
+    local s = getEff("Sky", "x_Sky")
+    if isNight then
+        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = cfg.milkyWay.SkyboxBk, cfg.milkyWay.SkyboxDn, cfg.milkyWay.SkyboxFt
+        s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = cfg.milkyWay.SkyboxLf, cfg.milkyWay.SkyboxRt, cfg.milkyWay.SkyboxUp
+    else
+        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = "", "", ""
+        s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = "", "", ""
+    end
+end
 
 local function apply()
     if not running then return end
     local isDay = (curMode == "day")
+    applySky(not isDay)
     
     local t = isDay and {
-        CT = 14.5, B = 2.8, E = 0.05, C = 0.18, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
-        Dens = 0.2, Haze = 0, Decay = Color3.fromRGB(180, 200, 220),
-        Amb = Color3.fromRGB(110, 110, 115), OutAmb = Color3.fromRGB(125, 125, 130)
+        CT = 14.5, B = 2.8, E = 0.05, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
+        Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
     } or {
-        CT = 0, B = 2.3, E = 0.12, C = 0.28, S = 0.35, Tint = Color3.fromRGB(205, 215, 255),
-        Dens = 0.25, Haze = 0.05, Decay = Color3.fromRGB(25, 30, 45),
-        Amb = Color3.fromRGB(35, 35, 50), OutAmb = Color3.fromRGB(45, 50, 65)
+        CT = 0, B = 2.5, E = 0.15, C = 0.2, S = 0.3, Tint = Color3.fromRGB(200, 210, 255),
+        Dens = 0.02, Amb = Color3.fromRGB(40, 40, 55)
     }
 
     local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    
-    Lighting.OutdoorAmbient = t.OutAmb
     Lighting.Ambient = t.Amb
-    Lighting.EnvironmentDiffuseScale = 1 
-    Lighting.EnvironmentSpecularScale = 1
+    Lighting.OutdoorAmbient = t.Amb
 
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
     TweenService:Create(CC, ti, {Contrast=t.C, Saturation=t.S, TintColor=t.Tint}):Play()
-    TweenService:Create(Atm, ti, {Density=t.Dens, Haze=t.Haze, Decay=t.Decay, Color=t.Tint}):Play()
-    TweenService:Create(Bloom, ti, {Intensity=0.45, Threshold=0.75}):Play()
-    TweenService:Create(DoF, ti, {FocusDistance=35, InFocusRadius=12, FarIntensity=0.1}):Play()
+    TweenService:Create(Atm, ti, {Density=t.Dens}):Play()
+    TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
 -- [[ 通知系統 ]]
@@ -66,7 +83,7 @@ local function notify(msg)
     local isDay = (curMode == "day")
     local nF = Instance.new("Frame", sg)
     nF.Size, nF.Position = UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3 = isDay and Color3.new(1,1,1) or Color3.fromRGB(35,35,40)
+    nF.BackgroundColor3 = isDay and Color3.new(1,1,1) or Color3.fromRGB(30,30,35)
     nF.BackgroundTransparency = 0.2
     Instance.new("UICorner", nF).CornerRadius = UDim.new(0,10)
     Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
@@ -100,7 +117,7 @@ local function notify(msg)
     end)
 end
 
--- [[ 主 UI 結構 ]]
+-- [[ 主 UI ]]
 local frame = Instance.new("Frame", sg)
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(0.5, -125, 0.5, -105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.3
@@ -113,7 +130,6 @@ title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40)
 title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, Enum.Font.GothamBold, 16, Color3.new(1,1,1)
 title.TextXAlignment = Enum.TextXAlignment.Left
 
--- 縮小按鈕
 local res = Instance.new("TextButton", sg)
 res.Size, res.Visible, res.Text = UDim2.new(0,55,0,55), false, cfg.emo
 res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(20,20,20), 0.2
@@ -122,25 +138,26 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 顯示 / 隱藏 主選單 + 吸邊處理 ]]
+-- [[ 平行位移核心邏輯 ]]
 local function showMain()
-    local x = res.AbsolutePosition.X - frame.Size.X.Offset/2 + res.Size.X.Offset/2
-    local y = res.AbsolutePosition.Y - frame.Size.Y.Offset/2 + res.Size.Y.Offset/2
-    frame.Position = UDim2.new(0, x, 0, y)
+    -- 從小點中心點還原主視窗，保持位置同步
+    local x = res.AbsolutePosition.X - (250/2) + (55/2)
+    local y = res.AbsolutePosition.Y - (210/2) + (55/2)
+    -- 這裡加一個補償值，確保展開後的位置剛好對應縮小前的位置
+    frame.Position = UDim2.new(0, x + 97, 0, y + 77)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
 end
 
 local function hideMain()
     local fPos = frame.AbsolutePosition
-    local x = math.clamp(fPos.X + frame.Size.X.Offset/2 - res.Size.X.Offset/2, 0, workspace.CurrentCamera.ViewportSize.X - res.Size.X.Offset)
-    local y = math.clamp(fPos.Y + frame.Size.Y.Offset/2 - res.Size.Y.Offset/2, 0, workspace.CurrentCamera.ViewportSize.Y - res.Size.Y.Offset)
-    res.Position = UDim2.new(0, x, 0, y)
+    -- 關鍵：計算「最小化按鈕」所在的水平線座標
+    -- 主視窗 Y 軸起點 + 按鈕 Y 軸偏移，確保平行
+    res.Position = UDim2.new(0, fPos.X + 97, 0, fPos.Y - 10) 
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end
 
--- [[ 標題按鈕 ]]
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
@@ -154,7 +171,6 @@ headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), hideMain)
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function() running = false sg:Destroy() end)
 res.MouseButton1Click:Connect(showMain)
 
--- [[ 主選單按鈕 ]]
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
@@ -174,11 +190,10 @@ end)
 mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
     curMode = "night"
     player:SetAttribute("ShaderMode", "night")
-    notify("成功套用：黑夜模式")
+    notify("成功套用：銀河星空")
     apply()
 end)
 
--- 記憶模式按鈕
 local mBtn
 mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
     rem = not rem
@@ -188,7 +203,5 @@ mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem 
     notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
 end)
 
--- 初始化 apply + 記憶模式通知同步
-apply()
-if rem then notify("記憶模式已啟用") end
 task.spawn(function() while running do apply() task.wait(5) end end)
+apply()
