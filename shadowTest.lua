@@ -103,7 +103,7 @@ local function showMain()
     local targetY = res.AbsolutePosition.Y - (res.Size.Y.Offset / 2) + 27
     frame.Position = UDim2.new(0, targetX, 0, targetY)
     frame.Visible, res.Visible = true, false
-    notify("選單已恢復")
+    notify("選單已開啟")
 end
 
 local function hideMain()
