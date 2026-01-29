@@ -18,14 +18,13 @@ local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
--- [[ 通知管理系統 - 修正重疊與視覺 ]]
+-- [[ 通知管理系統 ]]
 local activeNotifications = {}
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
     nF.ZIndex = 1005
     nF.Size = UDim2.new(0, 220, 0, 50)
     nF.Position = UDim2.new(1, 50, 0.8, 0)
-    -- 背景：3分之2透明白色
     nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(1,1,1), 0.66
     nF.BorderSizePixel = 0
     Instance.new("UICorner", nF).CornerRadius = UDim.new(0,8)
@@ -48,14 +47,12 @@ local function notify(msg)
 
     table.insert(activeNotifications, nF)
 
-    -- 使用像素偏移計算位置，徹底解決重疊
     local function updatePositions()
         local validNotifs = {}
         for _, v in ipairs(activeNotifications) do
             if v and v.Parent then table.insert(validNotifs, v) end
         end
         for i, v in ipairs(validNotifs) do
-            -- 每個彈窗高度 50 + 間距 15 = 65 像素
             local yOffset = ( #validNotifs - i ) * 65
             v:TweenPosition(UDim2.new(1, -240, 0.8, -yOffset), "Out", "Quart", 0.3, true)
         end
@@ -99,38 +96,36 @@ Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 local rStroke = Instance.new("UIStroke", res)
 rStroke.Color, rStroke.Thickness = Color3.fromRGB(200, 160, 255), 2
 
--- [[ 功能：原位切換邏輯 ]]
-local function headBtn(txt, pos, col, cb)
-    local b = Instance.new("TextButton", frame)
-    b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
-    b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
-    b.MouseButton1Click:Connect(function() cb(b) end)
-    return b
-end
-
-local minBtn -- 提前宣告供參考
-
+-- [[ 功能：左上角原位對齊邏輯 ]]
 local function showMain()
-    -- 計算恢復位置：讓 frame 中的 minBtn 對準當前 res 的中心
-    local targetX = res.AbsolutePosition.X - (frame.Size.X.Offset - 60) + (res.Size.X.Offset/2) - 11
-    local targetY = res.AbsolutePosition.Y - 9 + (res.Size.Y.Offset/2) - 11
+    -- 恢復時，主視窗左上角對準小點中心
+    local targetX = res.AbsolutePosition.X - (res.Size.X.Offset / 2) + 27
+    local targetY = res.AbsolutePosition.Y - (res.Size.Y.Offset / 2) + 27
     frame.Position = UDim2.new(0, targetX, 0, targetY)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
 end
 
-local function hideMain(b)
-    -- 計算縮小位置：讓 res 中心對準目前按鈕中心
-    local bPos = b.AbsolutePosition
-    res.Position = UDim2.new(0, bPos.X - (res.Size.X.Offset/2) + 11, 0, bPos.Y - (res.Size.Y.Offset/2) + 11)
+local function hideMain()
+    -- 縮小時，小點中心對準主視窗左上角
+    local fPos = frame.AbsolutePosition
+    res.Position = UDim2.new(0, fPos.X - (res.Size.X.Offset / 2), 0, fPos.Y - (res.Size.Y.Offset / 2))
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end
 
--- 綁定縮小按鈕
-minBtn = headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function(self)
-    hideMain(self)
+local function headBtn(txt, pos, col, cb)
+    local b = Instance.new("TextButton", frame)
+    b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
+    b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
+    Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
+    b.MouseButton1Click:Connect(cb)
+    return b
+end
+
+-- 最小化按鈕
+headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
+    hideMain()
 end)
 
 headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
@@ -159,45 +154,4 @@ local function apply()
     if not running then return end
     local CC, Atm, Sky = getEff("ColorCorrectionEffect","x_CC"), getEff("Atmosphere","x_Atm"), getEff("Sky","x_Sky")
     local t = (curMode=="day") and {CT=14,B=2.0,C=0.08,S=0.14,T=Color3.fromRGB(255,245,235),AD=0.28,Sdw=false,Sky=false} or
-                                   {CT=23.5,B=1.4,C=0.22,S=0.35,T=Color3.fromRGB(215,205,255),AD=0.35,Sdw=true,Sky=true}
-
-    TweenService:Create(Lighting, TweenInfo.new(1), {ClockTime = t.CT, Brightness = t.B}):Play()
-    Lighting.GlobalShadows = t.Sdw
-    CC.Contrast, CC.Saturation, CC.TintColor = t.C, t.S, t.T
-    Atm.Density, Sky.Enabled = t.AD, t.Sky
-end
-
-local function mainBtn(txt,col,pos,cb)
-    local b = Instance.new("TextButton", frame)
-    b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
-    b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.25
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
-    b.MouseButton1Click:Connect(cb)
-    return b
-end
-
-mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
-    notify("成功套用：早晨模式")
-    curMode = "day"
-    player:SetAttribute("ShaderMode", "day")
-    apply()
-end)
-
-mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,0), function()
-    notify("成功套用：黑夜模式")
-    curMode = "night"
-    player:SetAttribute("ShaderMode", "night")
-    apply()
-end)
-
-local mBtn
-mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
-    rem = not rem
-    player:SetAttribute("ShaderRemember", rem)
-    mBtn.Text = rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF"
-    mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
-    notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
-end)
-
-task.spawn(function() while running and sg.Parent do apply() task.wait(2) end end)
-if rem then task.wait(0.5) apply() end
+                                   {CT=23.5,B=1.4,C=0.22,S=0.35
