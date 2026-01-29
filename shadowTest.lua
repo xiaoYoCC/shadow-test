@@ -9,7 +9,6 @@ local cfg = {
     name = "✨ xiaoYo 閃避渲染"
 }
 
--- 清除舊 UI
 local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
@@ -54,7 +53,7 @@ local function apply()
     Sky.Enabled = not isDay
 end
 
--- [[ 通知系統 - 修復進度條凸出 ]]
+-- [[ 通知系統 ]]
 local activeNotifications = {}
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
@@ -68,16 +67,14 @@ local function notify(msg)
     nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
     nL.TextColor3, nL.TextSize, nL.Font = Color3.new(0,0,0), 15, Enum.Font.GothamBold
 
-    -- 進度條背景：開啟 ClipsDescendants 防止凸出
     local barBG = Instance.new("Frame", nF)
     barBG.Size, barBG.Position = UDim2.new(1, -16, 0, 4), UDim2.new(0, 8, 1, -8)
     barBG.BackgroundColor3, barBG.BackgroundTransparency = Color3.new(0,0,0), 0.8
-    barBG.BorderSizePixel = 0
-    barBG.ClipsDescendants = true -- 核心修正：裁切溢出部分
+    barBG.ClipsDescendants = true
     Instance.new("UICorner", barBG).CornerRadius = UDim.new(1,0)
     
     local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1, 0, 1, 0), Color3.fromRGB(150,150,150), 0
+    bar.Size, bar.BackgroundColor3 = UDim2.new(1, 0, 1, 0), Color3.fromRGB(150,150,150)
     Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
 
     table.insert(activeNotifications, nF)
@@ -126,9 +123,11 @@ local function showMain()
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
 end
+
 local function hideMain()
     local fPos = frame.AbsolutePosition
-    res.Position = UDim2.new(0, fPos.X - (res.Size.X.Offset / 2), 0, fPos.Y - (res.Size.Y.Offset / 2))
+    -- 調低位子：在 Y 軸加上 50 偏移量
+    res.Position = UDim2.new(0, fPos.X - (res.Size.X.Offset / 2), 0, fPos.Y - (res.Size.Y.Offset / 2) + 50)
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
 end
