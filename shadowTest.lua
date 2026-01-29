@@ -3,9 +3,8 @@ local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 
--- [[ 自定義配置 ]]
 local cfg = {
-    type = "Emoji", -- "Emoji" 或 "Image"
+    type = "Emoji",
     id   = "rbxassetid://13511162985",
     emo  = "👾",
     name = "✨ xiaoYo 閃避渲染"
@@ -17,9 +16,6 @@ local running, curMode, rem = true, player:GetAttribute("ShaderMode") or "day", 
 local sg = Instance.new("ScreenGui", CoreGui)
 sg.Name = "xiaoYo_ShaderUI"
 
---==================================================
--- UI 核心組件
---==================================================
 local frame = Instance.new("Frame", sg)
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(1, -270, 0.5, -105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(22,22,22), 0.35
@@ -32,7 +28,6 @@ title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40)
 title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, "GothamBold", 16, Color3.new(1,1,1)
 title.TextXAlignment = 0
 
--- 縮小鈕 (restore)
 local res = Instance.new("ImageButton", sg)
 res.Size, res.Visible, res.Active, res.Draggable = UDim2.new(0,55,0,55), false, true, true
 res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(30,30,30), 0.2
@@ -44,7 +39,6 @@ if cfg.type == "Image" then res.Image = cfg.id else
     l.Size, l.BackgroundTransparency, l.Text, l.TextScaled = UDim2.new(1,0,1,0), 1, cfg.emo, true
 end
 
--- 頂部功能鍵
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
@@ -53,7 +47,7 @@ local function headBtn(txt, pos, col, cb)
     b.MouseButton1Click:Connect(cb)
 end
 
-headBtn("-", UDim2.new(1,-60,0, headBtn and 9 or 9), Color3.fromRGB(60,60,60), function()
+headBtn("-", UDim2.new(1,-60,0,9), Color3.fromRGB(60,60,60), function()
     res.Position = frame.Position
     frame.Visible, res.Visible = false, true
 end)
@@ -63,7 +57,6 @@ headBtn("×", UDim2.new(1,-30,0,9), Color3.fromRGB(150,50,50), function()
     sg:Destroy()
 end)
 
--- restore 邏輯 (支援手機 Touch)
 local dStart
 res.InputBegan:Connect(function(input)
     if input.UserInputType.Value == 0 or input.UserInputType.Value == 7 then dStart = res.AbsolutePosition end
@@ -76,9 +69,6 @@ res.MouseButton1Up:Connect(function()
     dStart = nil
 end)
 
---==================================================
--- 渲染邏輯 (修復框框版)
---==================================================
 local function getEff(cl, nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
@@ -95,7 +85,7 @@ local function apply()
     
     Lighting.Brightness = s.B
     Lighting.GlobalShadows = (curMode == "night")
-    Lighting.Technology = (curMode == "day") and 3 or 2 -- Future(3) 或 Compatibility(2)
+    Lighting.Technology = (curMode == "day") and 3 or 2
     
     CC.Contrast, CC.Saturation, CC.TintColor = s.C, s.S, s.T
     Atm.Density, Sky.Enabled = s.AD, (curMode=="night")
@@ -105,9 +95,6 @@ local function apply()
     end
 end
 
---==================================================
--- 選單按鈕
---==================================================
 local function mainBtn(txt, col, pos, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
@@ -137,9 +124,6 @@ mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem 
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
 end)
 
---==================================================
--- 循環與初始化
---==================================================
 task.spawn(function()
     while running do
         apply()
