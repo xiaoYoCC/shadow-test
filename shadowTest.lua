@@ -5,7 +5,7 @@ local player = Players.LocalPlayer
 
 local cfg = {
     emo  = "👾",
-    size = 32,
+    size = 24,
     name = "✨ xiaoYo 閃避渲染"
 }
 
@@ -14,12 +14,16 @@ local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
 local running, curMode, rem = true, player:GetAttribute("ShaderMode") or "day", player:GetAttribute("ShaderRemember") or false
+
+-- ScreenGui 層級設為最高
 local sg = Instance.new("ScreenGui", pGui)
-sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 999
+sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
 -- [[ 通知系統 ]]
 local function notify(msg)
     local nF = Instance.new("Frame", sg)
+    nF.ZIndex = 1005
     nF.Size, nF.Position = UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
     nF.BackgroundColor3, nF.BackgroundTransparency = Color3.new(0,0,0), 0.4
     nF.BorderSizePixel = 0
@@ -37,7 +41,7 @@ local function notify(msg)
     barBG.BackgroundColor3, barBG.BorderSizePixel = Color3.new(0,0,0), 0
     
     local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(100,100,100), 0
+    bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(180,180,180), 0
     Instance.new("UICorner", bar)
 
     nF:TweenPosition(UDim2.new(1, -240, 0.8, 0), "Out", "Back", 0.5, true)
@@ -54,6 +58,7 @@ end
 
 -- [[ 主 UI ]]
 local frame = Instance.new("Frame", sg)
+frame.ZIndex = 1000
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(0.5, -125, 0.5, -105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(22,22,22), 0.35
 frame.Active, frame.Draggable = true, true
@@ -65,8 +70,9 @@ title.Size, title.Position, title.BackgroundTransparency = UDim2.new(0,160,0,40)
 title.Text, title.Font, title.TextSize, title.TextColor3 = cfg.name, Enum.Font.GothamBold, 16, Color3.new(1,1,1)
 title.TextXAlignment = Enum.TextXAlignment.Left
 
--- 縮小後的圓圈按鈕
+-- 縮小鈕 (👾)
 local res = Instance.new("TextButton", sg)
+res.ZIndex = 1001
 res.Size, res.Visible, res.Text = UDim2.new(0,55,0,55), false, cfg.emo
 res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(30,30,30), 0.2
 res.TextColor3, res.TextSize = Color3.new(1,1,1), cfg.size
@@ -74,24 +80,16 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.new(1,1,1)
 
--- [[ 點擊回復邏輯修復 ]]
-local dragPos
-res.MouseButton1Down:Connect(function()
-    dragPos = res.AbsolutePosition
-end)
-
-res.MouseButton1Up:Connect(function()
-    local currentPos = res.AbsolutePosition
-    -- 如果放開時的位置跟按下的位置差不多(沒在拖曳)，就恢復主視窗
-    if dragPos and (currentPos - dragPos).Magnitude < 5 then
-        frame.Position = UDim2.new(0.5, -125, 0.5, -105)
-        frame.Visible = true
-        res.Visible = false
-    end
+-- 點擊回復邏輯：直接監聽 MouseButton1Click 確保必開
+res.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    res.Visible = false
+    notify("選單已恢復")
 end)
 
 local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
+    b.ZIndex = 1002
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,22,0,22), pos, txt, col
     b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
@@ -138,6 +136,7 @@ end
 
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
+    b.ZIndex = 1002
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.86,0,0,36), pos, txt, col
     b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.25
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
