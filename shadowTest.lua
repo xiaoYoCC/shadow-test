@@ -140,10 +140,8 @@ Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
 -- [[ 平行位移核心邏輯 ]]
 local function showMain()
-    -- 從小點中心點還原主視窗，保持位置同步
     local x = res.AbsolutePosition.X - (250/2) + (55/2)
     local y = res.AbsolutePosition.Y - (210/2) + (55/2)
-    -- 這裡加一個補償值，確保展開後的位置剛好對應縮小前的位置
     frame.Position = UDim2.new(0, x + 97, 0, y + 77)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
@@ -151,8 +149,6 @@ end
 
 local function hideMain()
     local fPos = frame.AbsolutePosition
-    -- 關鍵：計算「最小化按鈕」所在的水平線座標
-    -- 主視窗 Y 軸起點 + 按鈕 Y 軸偏移，確保平行
     res.Position = UDim2.new(0, fPos.X + 97, 0, fPos.Y - 10) 
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
@@ -180,6 +176,7 @@ local function mainBtn(txt,col,pos,cb)
     return b
 end
 
+-- [[ 模式按鈕 ]]
 mainBtn("☀ 早晨模式", Color3.fromRGB(120,190,255), UDim2.new(0.07,0,0.22,0), function()
     curMode = "day"
     player:SetAttribute("ShaderMode", "day")
@@ -194,6 +191,7 @@ mainBtn("🌌 黑夜模式", Color3.fromRGB(160,110,255), UDim2.new(0.07,0,0.42,
     apply()
 end)
 
+-- [[ 記憶模式按鈕 ]]
 local mBtn
 mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120), UDim2.new(0.07,0,0.68,0), function()
     rem = not rem
@@ -202,6 +200,12 @@ mBtn = mainBtn(rem and "💾 記憶模式: ON" or "💾 記憶模式: OFF", rem 
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(90,180,120) or Color3.fromRGB(120,120,120)
     notify(rem and "記憶模式：已開啟" or "記憶模式：已關閉")
 end)
+
+-- [[ 自動套用記憶模式 ]]
+if rem and player:GetAttribute("ShaderMode") then
+    curMode = player:GetAttribute("ShaderMode")
+    apply()
+end
 
 task.spawn(function() while running do apply() task.wait(5) end end)
 apply()
