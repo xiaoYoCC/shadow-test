@@ -60,7 +60,7 @@ local function apply()
     local isDay = (curMode == "day")
     applySky(not isDay)
     
-    -- 調低白天曝光 (E=0)，調高晚上曝光 (E=0.25)
+    -- 白天曝光調低 (0)，晚上曝光調高 (0.25)
     local t = isDay and {
         CT = 14.5, B = 2.8, E = 0, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
         Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
@@ -153,7 +153,7 @@ local function toggleMode()
     apply()
 end
 
--- [[ 鍵盤 U 監聽 ]]
+-- [[ 鍵盤 K 監聽 ]]
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.K then
