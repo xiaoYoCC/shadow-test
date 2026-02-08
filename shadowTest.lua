@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 local cfg = {
@@ -59,11 +60,12 @@ local function apply()
     local isDay = (curMode == "day")
     applySky(not isDay)
     
+    -- 調低白天曝光 (E=0)，調高晚上曝光 (E=0.25)
     local t = isDay and {
-        CT = 14.5, B = 2.8, E = 0.05, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
+        CT = 14.5, B = 2.8, E = 0, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
         Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
     } or {
-        CT = 0, B = 2.5, E = 0.15, C = 0.2, S = 0.3, Tint = Color3.fromRGB(200, 210, 255),
+        CT = 0, B = 2.5, E = 0.25, C = 0.2, S = 0.3, Tint = Color3.fromRGB(200, 210, 255),
         Dens = 0.01, Amb = Color3.fromRGB(40, 40, 55)
     }
 
@@ -92,12 +94,10 @@ local function notify(msg)
     nL.TextColor3 = isDay and Color3.new(0,0,0) or Color3.new(1,1,1)
     nL.TextSize, nL.Font = 15, Enum.Font.GothamBold
 
-    -- 進度條外框
     local barBG = Instance.new("Frame", nF)
     barBG.Size, barBG.Position = UDim2.new(1,-16,0,4), UDim2.new(0,8,1,-8)
     barBG.BackgroundColor3, barBG.ClipsDescendants = Color3.new(0,0,0), true
     Instance.new("UICorner", barBG)
-    -- 動態進度條
     local bar = Instance.new("Frame", barBG)
     bar.Size, bar.BackgroundColor3 = UDim2.new(1,0,1,0), Color3.fromRGB(180,180,180)
     Instance.new("UICorner", bar)
@@ -110,7 +110,6 @@ local function notify(msg)
     end
     updatePos()
 
-    -- 進度條動畫
     TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)}):Play()
     
     task.delay(2.5, function()
@@ -141,6 +140,27 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
+-- [[ 切換邏輯 ]]
+local function toggleMode()
+    if curMode == "day" then
+        curMode = "night"
+        notify("快捷切換：夜晚模式")
+    else
+        curMode = "day"
+        notify("快捷切換：早晨模式")
+    end
+    player:SetAttribute("ShaderMode", curMode)
+    apply()
+end
+
+-- [[ 鍵盤 U 監聽 ]]
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.U then
+        toggleMode()
+    end
+end)
+
 -- [[ 位移與防誤觸邏輯 ]]
 local dragStartPos = nil
 res.MouseButton1Down:Connect(function()
@@ -149,7 +169,6 @@ end)
 
 local function hideMain()
     local fPos = frame.AbsolutePosition
-    -- 小點平行位於主視窗左側 60 像素處
     res.Position = UDim2.new(0, fPos.X - 50, 0, fPos.Y)
     frame.Visible, res.Visible = false, true
     notify("選單已縮小")
@@ -157,7 +176,6 @@ end
 
 local function showMain()
     local rPos = res.AbsolutePosition
-    -- 恢復時視窗從小點右側彈出
     frame.Position = UDim2.new(0, rPos.X + 50, 0, rPos.Y)
     frame.Visible, res.Visible = true, false
     notify("選單已恢復")
@@ -166,7 +184,7 @@ end
 res.MouseButton1Up:Connect(function()
     if dragStartPos then
         local dist = (res.AbsolutePosition - dragStartPos).Magnitude
-        if dist < 8 then -- 移動距離極小才視為點擊，防止拖拽誤觸
+        if dist < 8 then
             showMain()
         end
     end
