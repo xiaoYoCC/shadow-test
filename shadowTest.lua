@@ -156,7 +156,7 @@ end
 -- [[ 鍵盤 U 監聽 ]]
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
-    if input.KeyCode == Enum.KeyCode.U then
+    if input.KeyCode == Enum.KeyCode.K then
         toggleMode()
     end
 end)
