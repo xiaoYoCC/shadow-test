@@ -8,6 +8,7 @@ local cfg = {
     emo  = "👾",
     size = 24,
     name = "✨ xiaoYo 閃避渲染",
+    trollSound = "rbxassetid://5567523620", -- 爆音音效 ID
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
         SkyboxDn = "rbxassetid://159454286",
@@ -60,7 +61,6 @@ local function apply()
     local isDay = (curMode == "day")
     applySky(not isDay)
     
-    -- 白天曝光調低 (0)，晚上曝光調高 (0.25)
     local t = isDay and {
         CT = 14.5, B = 2.8, E = 0, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
         Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
@@ -78,8 +78,7 @@ local function apply()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
--- [[ 進度條通知系統 ]]
-local activeNotifications = {}
+-- [[ 通知與 UI 工具 ]]
 local function notify(msg)
     local isDay = (curMode == "day")
     local nF = Instance.new("Frame", sg)
@@ -88,34 +87,14 @@ local function notify(msg)
     nF.BackgroundTransparency = 0.2
     Instance.new("UICorner", nF).CornerRadius = UDim.new(0,10)
     Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
-
     local nL = Instance.new("TextLabel", nF)
     nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
     nL.TextColor3 = isDay and Color3.new(0,0,0) or Color3.new(1,1,1)
     nL.TextSize, nL.Font = 15, Enum.Font.GothamBold
-
-    local barBG = Instance.new("Frame", nF)
-    barBG.Size, barBG.Position = UDim2.new(1,-16,0,4), UDim2.new(0,8,1,-8)
-    barBG.BackgroundColor3, barBG.ClipsDescendants = Color3.new(0,0,0), true
-    Instance.new("UICorner", barBG)
-    local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3 = UDim2.new(1,0,1,0), Color3.fromRGB(180,180,180)
-    Instance.new("UICorner", bar)
-
-    table.insert(activeNotifications, nF)
-    local function updatePos()
-        for i, v in ipairs(activeNotifications) do
-            v:TweenPosition(UDim2.new(1, -240, 0.8, -(#activeNotifications - i) * 65), "Out", "Quart", 0.3, true)
-        end
-    end
-    updatePos()
-
-    TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)}):Play()
-    
+    nF:TweenPosition(UDim2.new(1, -240, 0.8, 0), "Out", "Quart", 0.3, true)
     task.delay(2.5, function()
-        for i, v in ipairs(activeNotifications) do if v == nF then table.remove(activeNotifications, i) break end end
-        nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, nF.Position.Y.Offset), "In", "Quart", 0.3, true)
-        task.wait(0.3) nF:Destroy() updatePos()
+        nF:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quart", 0.3, true)
+        task.wait(0.3) nF:Destroy()
     end)
 end
 
@@ -140,53 +119,55 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 切換邏輯 ]]
-local function toggleMode()
-    if curMode == "day" then
-        curMode = "night"
-        notify("快捷切換：夜晚模式")
-    else
-        curMode = "day"
-        notify("快捷切換：早晨模式")
-    end
-    player:SetAttribute("ShaderMode", curMode)
-    apply()
+-- [[ 關閉確認系統與🗿效果 ]]
+local function finalTroll()
+    running = false
+    -- 爆音音效
+    local s = Instance.new("Sound", game.Workspace)
+    s.SoundId, s.Volume = cfg.trollSound, 10 -- 爆音設置
+    s:Play()
+    -- 🗿 漸出
+    local moai = Instance.new("TextLabel", sg)
+    moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
+    moai.BackgroundTransparency, moai.Text = 1, "🗿"
+    moai.TextSize, moai.TextColor3 = 300, Color3.new(1,1,1)
+    
+    TweenService:Create(moai, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
+    task.wait(1.5)
+    sg:Destroy()
 end
 
--- [[ 鍵盤 K 監聽 ]]
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.K then
-        toggleMode()
-    end
-end)
+local function openConfirmUI()
+    local confirmF = Instance.new("Frame", sg)
+    confirmF.Size = UDim2.new(0, 240, 0, 180) -- 4:3 比例
+    confirmF.Position = UDim2.new(0.5, -120, 0.5, -90)
+    confirmF.BackgroundColor3, confirmF.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.1
+    Instance.new("UICorner", confirmF).CornerRadius = UDim.new(0,15)
+    Instance.new("UIStroke", confirmF).Color = Color3.fromRGB(200,160,255)
 
--- [[ 位移與防誤觸邏輯 ]]
+    local msg = Instance.new("TextLabel", confirmF)
+    msg.Size, msg.Position, msg.BackgroundTransparency = UDim2.new(1,0,0,80), UDim2.new(0,0,0,10), 1
+    msg.Text, msg.TextColor3, msg.Font, msg.TextSize = "確定要關閉渲染嗎？", Color3.new(1,1,1), Enum.Font.GothamBold, 16
+
+    local function createBtn(txt, col, pos, cb)
+        local b = Instance.new("TextButton", confirmF)
+        b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,80,0,35), pos, txt, col
+        b.TextColor3, b.Font, b.TextSize = Color3.new(1,1,1), Enum.Font.GothamMedium, 14
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+        b.MouseButton1Click:Connect(cb)
+    end
+
+    createBtn("取消", Color3.fromRGB(60,60,60), UDim2.new(0.1,0,0.65,0), function() confirmF:Destroy() end)
+    createBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalTroll)
+end
+
+-- [[ 原有邏輯 ]]
 local dragStartPos = nil
-res.MouseButton1Down:Connect(function()
-    dragStartPos = res.AbsolutePosition
-end)
-
-local function hideMain()
-    local fPos = frame.AbsolutePosition
-    res.Position = UDim2.new(0, fPos.X - 50, 0, fPos.Y)
-    frame.Visible, res.Visible = false, true
-    notify("選單已縮小")
-end
-
-local function showMain()
-    local rPos = res.AbsolutePosition
-    frame.Position = UDim2.new(0, rPos.X + 50, 0, rPos.Y)
-    frame.Visible, res.Visible = true, false
-    notify("選單已恢復")
-end
-
+res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 res.MouseButton1Up:Connect(function()
-    if dragStartPos then
-        local dist = (res.AbsolutePosition - dragStartPos).Magnitude
-        if dist < 8 then
-            showMain()
-        end
+    if dragStartPos and (res.AbsolutePosition - dragStartPos).Magnitude < 8 then
+        frame.Position = UDim2.new(0, res.AbsolutePosition.X + 50, 0, res.AbsolutePosition.Y)
+        frame.Visible, res.Visible = true, false
     end
 end)
 
@@ -196,11 +177,13 @@ local function headBtn(txt, pos, col, cb)
     b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
     b.MouseButton1Click:Connect(cb)
-    return b
 end
 
-headBtn("-", UDim2.new(1,-65,0,8), Color3.fromRGB(60,60,60), hideMain)
-headBtn("×", UDim2.new(1,-32,0,8), Color3.fromRGB(150,50,50), function() running = false sg:Destroy() end)
+headBtn("-", UDim2.new(1,-65,0,8), Color3.fromRGB(60,60,60), function()
+    res.Position = UDim2.new(0, frame.AbsolutePosition.X - 50, 0, frame.AbsolutePosition.Y)
+    frame.Visible, res.Visible = false, true
+end)
+headBtn("×", UDim2.new(1,-32,0,8), Color3.fromRGB(150,50,50), openConfirmUI)
 
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
@@ -208,36 +191,20 @@ local function mainBtn(txt,col,pos,cb)
     b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.2
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
     b.MouseButton1Click:Connect(cb)
-    return b
 end
 
-mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0), function()
-    curMode = "day"
-    player:SetAttribute("ShaderMode", "day")
-    notify("成功套用：早晨模式")
-    apply()
+mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0), function() curMode="day"; apply(); notify("成功套用：早晨模式") end)
+mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function() curMode="night"; apply(); notify("成功套用：夜晚模式") end)
+mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
+    rem = not rem; player:SetAttribute("ShaderRemember", rem); apply(); notify(rem and "儲存開啟" or "儲存關閉")
 end)
 
-mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function()
-    curMode = "night"
-    player:SetAttribute("ShaderMode", "night")
-    notify("成功套用：夜晚模式")
-    apply()
+UserInputService.InputBegan:Connect(function(i, p)
+    if not p and i.KeyCode == Enum.KeyCode.K then
+        curMode = (curMode == "day") and "night" or "day"
+        apply(); notify("快捷切換模式")
+    end
 end)
 
-local mBtn
-mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
-    rem = not rem
-    player:SetAttribute("ShaderRemember", rem)
-    mBtn.Text = rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF"
-    mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
-    notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
-end)
-
-if rem and player:GetAttribute("ShaderMode") then
-    curMode = player:GetAttribute("ShaderMode")
-    apply()
-end
-
-task.spawn(function() while running do apply() task.wait(3) end end)
+task.spawn(function() while running do apply(); task.wait(3) end end)
 apply()
