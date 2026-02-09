@@ -153,7 +153,7 @@ local function finalExit()
     trollGui.DisplayOrder = 999999
     
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 10
+    sound.SoundId, sound.Volume = cfg.trollSound, 5
     sound:Play()
     Debris:AddItem(sound, 8) -- 延長清理時間以適應可能的歌曲長度
 
