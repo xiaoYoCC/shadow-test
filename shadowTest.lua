@@ -10,7 +10,7 @@ local cfg = {
     emo  = "👾",
     size = 24,
     name = "✨ xiaoYo 閃避渲染",
-    trollSound = "rbxassetid://117487354926114", -- 已更新為指定的音效 ID
+    trollSound = "rbxassetid://117487354926114", 
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
         SkyboxDn = "rbxassetid://159454286",
@@ -153,9 +153,9 @@ local function finalExit()
     trollGui.DisplayOrder = 999999
     
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 5
+    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 -- 這裡已將音量調低 (0.5)
     sound:Play()
-    Debris:AddItem(sound, 8) -- 延長清理時間以適應可能的歌曲長度
+    Debris:AddItem(sound, 8) 
 
     local moai = Instance.new("TextLabel", trollGui)
     moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
