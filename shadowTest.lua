@@ -10,7 +10,7 @@ local cfg = {
     emo  = "👾",
     size = 24,
     name = "✨ xiaoYo 閃避渲染",
-    trollSound = "rbxassetid://5567523620", -- 爆音音效
+    trollSound = "rbxassetid://117487354926114", -- 已更新為指定的音效 ID
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
         SkyboxDn = "rbxassetid://159454286",
@@ -63,7 +63,6 @@ local function apply()
     local isDay = (curMode == "day")
     applySky(not isDay)
     
-    -- 白天曝光調低 (0)，晚上曝光調高 (0.25)
     local t = isDay and {
         CT = 14.5, B = 2.8, E = 0, C = 0.15, S = 0.15, Tint = Color3.fromRGB(255, 252, 240),
         Dens = 0.2, Amb = Color3.fromRGB(110, 110, 115)
@@ -74,7 +73,6 @@ local function apply()
 
     local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
     
-    -- 核心：鎖定 Lighting 屬性
     Lighting.Ambient = t.Amb
     Lighting.OutdoorAmbient = t.Amb
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
@@ -83,7 +81,7 @@ local function apply()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
--- [[ 進度條通知系統 (修正向上推疊動畫) ]]
+-- [[ 進度條通知系統 ]]
 local activeNotifications = {}
 local function updatePos()
     for i, v in ipairs(activeNotifications) do
@@ -146,10 +144,10 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 關閉功能與 🗿 漸出動畫 ]]
+-- [[ 關閉功能與 🗿 動畫 ]]
 local function finalExit()
     running = false
-    sg.Enabled = false -- 立即隱藏所有 UI
+    sg.Enabled = false 
     
     local trollGui = Instance.new("ScreenGui", pGui)
     trollGui.DisplayOrder = 999999
@@ -157,7 +155,7 @@ local function finalExit()
     local sound = Instance.new("Sound", SoundService)
     sound.SoundId, sound.Volume = cfg.trollSound, 10
     sound:Play()
-    Debris:AddItem(sound, 5)
+    Debris:AddItem(sound, 8) -- 延長清理時間以適應可能的歌曲長度
 
     local moai = Instance.new("TextLabel", trollGui)
     moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
@@ -200,7 +198,7 @@ local function openConfirmUI()
     makeBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
 end
 
--- [[ 位移與防誤觸邏輯 ]]
+-- [[ 交互邏輯 ]]
 local dragStartPos = nil
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 res.MouseButton1Up:Connect(function()
@@ -249,7 +247,6 @@ mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem 
     notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
 
--- [[ 鍵盤 K 監聽 ]]
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.K then
@@ -264,7 +261,6 @@ if rem and player:GetAttribute("ShaderMode") then
     curMode = player:GetAttribute("ShaderMode")
 end
 
--- 啟動與循環
 apply()
 task.spawn(function()
     while running do
