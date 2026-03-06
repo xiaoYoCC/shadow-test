@@ -21,7 +21,7 @@ local cfg = {
     }
 }
 
--- 清理舊 UI
+-- [[ 1. 初始化 ]]
 local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("xiaoYo_ShaderUI") then pGui.xiaoYo_ShaderUI:Destroy() end
 
@@ -32,7 +32,7 @@ local rem = player:GetAttribute("ShaderRemember") or false
 local sg = Instance.new("ScreenGui", pGui)
 sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "xiaoYo_ShaderUI", false, 99999
 
--- [[ 渲染組件 ]]
+-- [[ 2. 渲染核心 ]]
 local function getEff(cl, nm)
     local e = Lighting:FindFirstChild(nm) or Instance.new(cl)
     e.Name, e.Parent = nm, Lighting
@@ -72,7 +72,6 @@ local function apply()
     }
 
     local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    
     Lighting.Ambient = t.Amb
     Lighting.OutdoorAmbient = t.Amb
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
@@ -81,49 +80,24 @@ local function apply()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
--- [[ 進度條通知系統 ]]
-local activeNotifications = {}
-local function updatePos()
-    for i, v in ipairs(activeNotifications) do
-        v:TweenPosition(UDim2.new(1, -240, 0.8, -(#activeNotifications - i) * 65), "Out", "Quart", 0.3, true)
-    end
+-- [[ 3. 關閉功能 (音量 0.5 + 🗿) ]]
+local function finalExit()
+    running = false
+    sg.Enabled = false 
+    local tGui = Instance.new("ScreenGui", pGui)
+    tGui.DisplayOrder = 999999
+    local s = Instance.new("Sound", SoundService)
+    s.SoundId, s.Volume = cfg.trollSound, 0.5
+    s:Play() Debris:AddItem(s, 8) 
+    local moai = Instance.new("TextLabel", tGui)
+    moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
+    moai.BackgroundTransparency, moai.Text = 1, "🗿"
+    moai.TextSize, moai.TextColor3 = 250, Color3.new(1,1,1)
+    TweenService:Create(moai, TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
+    task.wait(2) tGui:Destroy() sg:Destroy() script:Destroy()
 end
 
-local function notify(msg)
-    local isDay = (curMode == "day")
-    local nF = Instance.new("Frame", sg)
-    nF.Size, nF.Position = UDim2.new(0, 220, 0, 50), UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3 = isDay and Color3.new(1,1,1) or Color3.fromRGB(35,35,40)
-    nF.BackgroundTransparency = 0.2
-    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,10)
-    Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
-
-    local nL = Instance.new("TextLabel", nF)
-    nL.Size, nL.BackgroundTransparency, nL.Text = UDim2.new(1,0,1,-5), 1, msg
-    nL.TextColor3 = isDay and Color3.new(0,0,0) or Color3.new(1,1,1)
-    nL.TextSize, nL.Font = 15, Enum.Font.GothamBold
-
-    local barBG = Instance.new("Frame", nF)
-    barBG.Size, barBG.Position = UDim2.new(1,-16,0,4), UDim2.new(0,8,1,-8)
-    barBG.BackgroundColor3, barBG.ClipsDescendants = Color3.new(0,0,0), true
-    Instance.new("UICorner", barBG)
-    local bar = Instance.new("Frame", barBG)
-    bar.Size, bar.BackgroundColor3 = UDim2.new(1,0,1,0), Color3.fromRGB(180,180,180)
-    Instance.new("UICorner", bar)
-
-    table.insert(activeNotifications, nF)
-    updatePos()
-
-    TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)}):Play()
-    
-    task.delay(2.5, function()
-        for i, v in ipairs(activeNotifications) do if v == nF then table.remove(activeNotifications, i) break end end
-        nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, nF.Position.Y.Offset), "In", "Quart", 0.3, true)
-        task.wait(0.3) nF:Destroy() updatePos()
-    end)
-end
-
--- [[ 主 UI ]]
+-- [[ 4. UI 構建與按鈕 ]]
 local frame = Instance.new("Frame", sg)
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(0.5, -125, 0.5, -105)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.25
@@ -144,142 +118,67 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 關閉功能與 🗿 動畫 ]]
-local function finalExit()
-    running = false
-    sg.Enabled = false 
-    
-    local trollGui = Instance.new("ScreenGui", pGui)
-    trollGui.DisplayOrder = 999999
-    
-    local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 0.5
-    sound:Play()
-    Debris:AddItem(sound, 8) 
-
-    local moai = Instance.new("TextLabel", trollGui)
-    moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
-    moai.BackgroundTransparency, moai.Text = 1, "🗿"
-    moai.TextSize, moai.TextColor3 = 250, Color3.new(1,1,1)
-    moai.Font = Enum.Font.GothamBold
-    
-    local ti = TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(moai, ti, {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
-    
-    task.wait(2)
-    trollGui:Destroy()
-    sg:Destroy()
-    script:Destroy()
+local function hBtn(txt, pos, col, cb)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size, btn.Position, btn.Text, btn.BackgroundColor3 = UDim2.new(0,24,0,24), pos, txt, col
+    btn.TextColor3, btn.Font = Color3.new(1,1,1), Enum.Font.GothamBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+    btn.MouseButton1Click:Connect(cb)
 end
-
-local function openConfirmUI()
-    if sg:FindFirstChild("ConfirmUI") then return end
-    local cF = Instance.new("Frame", sg)
-    cF.Name = "ConfirmUI"
-    cF.Size, cF.Position = UDim2.new(0, 240, 0, 180), UDim2.new(0.5, -120, 0.5, -90)
-    cF.BackgroundColor3, cF.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.1
-    cF.ZIndex = 100
-    Instance.new("UICorner", cF).CornerRadius = UDim.new(0,15)
-    Instance.new("UIStroke", cF).Color = Color3.fromRGB(200,160,255)
-
-    local msg = Instance.new("TextLabel", cF)
-    msg.Size, msg.Position, msg.BackgroundTransparency = UDim2.new(1,0,0,80), UDim2.new(0,0,0,10), 1
-    msg.Text, msg.TextColor3, msg.Font, msg.TextSize = "確定要關閉渲染嗎？", Color3.new(1,1,1), Enum.Font.GothamBold, 16
-    msg.ZIndex = 101
-
-    local function makeBtn(txt, col, pos, cb)
-        local b = Instance.new("TextButton", cF)
-        b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,80,0,35), pos, txt, col
-        b.TextColor3, b.Font, b.TextSize, b.ZIndex = Color3.new(1,1,1), Enum.Font.GothamMedium, 14, 102
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-        b.MouseButton1Click:Connect(cb)
-    end
-    makeBtn("取消", Color3.fromRGB(60,60,60), UDim2.new(0.1,0,0.65,0), function() cF:Destroy() end)
-    makeBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
-end
-
--- [[ 交互邏輯 ]]
-local dragStartPos = nil
-res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
-res.MouseButton1Up:Connect(function()
-    if dragStartPos and (res.AbsolutePosition - dragStartPos).Magnitude < 8 then
-        frame.Position = UDim2.new(0, res.AbsolutePosition.X + 50, 0, res.AbsolutePosition.Y)
-        frame.Visible, res.Visible = true, false
-        notify("選單已恢復")
-    end
-end)
-
-local function headBtn(txt, pos, col, cb)
-    local b = Instance.new("TextButton", frame)
-    b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,24,0,24), pos, txt, col
-    b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-    b.MouseButton1Click:Connect(cb)
-end
-headBtn("-", UDim2.new(1,-65,0,8), Color3.fromRGB(60,60,60), function()
-    res.Position = UDim2.new(0, frame.AbsolutePosition.X - 50, 0, frame.AbsolutePosition.Y)
-    frame.Visible, res.Visible = false, true
-    notify("選單已縮小")
-end)
-headBtn("×", UDim2.new(1,-32,0,8), Color3.fromRGB(150,50,50), openConfirmUI)
+hBtn("-", UDim2.new(1,-65,0,8), Color3.fromRGB(60,60,60), function() frame.Visible, res.Visible = false, true end)
+hBtn("×", UDim2.new(1,-32,0,8), Color3.fromRGB(150,50,50), finalExit)
 
 local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.88,0,0,38), pos, txt, col
     b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.2
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+    Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(cb)
     return b
 end
-
-mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0), function()
-    curMode = "day"; player:SetAttribute("ShaderMode", "day"); notify("成功套用：早晨模式"); apply()
-end)
-mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function()
-    curMode = "night"; player:SetAttribute("ShaderMode", "night"); notify("成功套用：夜晚模式"); apply()
+mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0), function() curMode="day"; apply() end)
+mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function() curMode="night"; apply() end)
+local mBtn; mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
+    rem = not rem; mBtn.Text = rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF"; mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
 end)
 
-local mBtn
-mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
-    rem = not rem; player:SetAttribute("ShaderRemember", rem)
-    mBtn.Text = rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF"
-    mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
-    notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
-end)
+-- [[ 5. 倒地滑手機優化版邏輯 ]]
+local function slideLogic()
+    local char = player.Character
+    if char then
+        local downed = char:GetAttribute("Downed")
+        local emoting = char:GetAttribute("Emoting")
+        
+        -- 如果偵測到倒地且正在動作，強制注入蹲下屬性
+        if downed and emoting then
+            char:SetAttribute("Crouching", true)
+            -- 強力鎖定：防止遊戲在倒地時強制重置你的物理摩擦力
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end 
+        end
+    end
+end
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.K then
-        curMode = (curMode == "day") and "night" or "day"
-        player:SetAttribute("ShaderMode", curMode)
-        notify(curMode == "day" and "快捷切換：早晨模式" or "快捷切換：夜晚模式")
-        apply()
+-- [[ 6. 核心循環：渲染維持 + 倒地滑偵測 ]]
+apply()
+task.spawn(function()
+    while running do
+        slideLogic() -- 高頻偵測倒地滑（對手機操作更靈敏）
+        task.wait(0.1) -- 0.1秒檢查一次，確保不卡頓但夠快
     end
 end)
 
-if rem and player:GetAttribute("ShaderMode") then
-    curMode = player:GetAttribute("ShaderMode")
-end
-
-apply()
-
--- [[ 核心循環：渲染維持 + 倒地滑功能 ]]
+-- 渲染維持循環（較低頻率以節省效能）
 task.spawn(function()
     while running do
-        -- 1. 渲染維持
-        apply()
-        
-        -- 2. 倒地滑功能 (Evade 2.0 邏輯)
-        pcall(function()
-            local char = player.Character
-            if char and char:GetAttribute("Downed") then
-                -- 如果正在做動作，強制維持蹲下狀態以實現滑行物理
-                if char:GetAttribute("Emoting") then
-                    char:SetAttribute("Crouching", true)
-                end
-            end
-        end)
-        
-        task.wait(1) -- 縮短檢查時間以增加倒地滑靈敏度
+        task.wait(3)
+        if running then apply() end
+    end
+end)
+
+-- 快捷鍵保持
+UserInputService.InputBegan:Connect(function(i, p)
+    if not p and i.KeyCode == Enum.KeyCode.K then
+        curMode = (curMode == "day") and "night" or "day"; apply()
     end
 end)
