@@ -10,7 +10,7 @@ local cfg = {
     emo  = "👾",
     size = 24,
     name = "✨ xiaoYo 閃避渲染",
-    trollSound = "rbxassetid://117487354926114", -- 修正後的音效
+    trollSound = "rbxassetid://117487354926114", 
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
         SkyboxDn = "rbxassetid://159454286",
@@ -81,7 +81,7 @@ local function apply()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
--- [[ 通知系統 ]]
+-- [[ 進度條通知系統 ]]
 local activeNotifications = {}
 local function updatePos()
     for i, v in ipairs(activeNotifications) do
@@ -153,7 +153,7 @@ local function finalExit()
     trollGui.DisplayOrder = 999999
     
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 -- 低音量 0.5
+    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 -- 這裡已將音量調低 (0.5)
     sound:Play()
     Debris:AddItem(sound, 8) 
 
@@ -198,7 +198,7 @@ local function openConfirmUI()
     makeBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
 end
 
--- [[ UI 交互邏輯 ]]
+-- [[ 交互邏輯 ]]
 local dragStartPos = nil
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 res.MouseButton1Up:Connect(function()
@@ -247,29 +247,24 @@ mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem 
     notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
 
--- [[ 核心循環：渲染維持 + 倒地滑手機優化 ]]
-apply()
-task.spawn(function()
-    while running do
-        -- 1. 渲染同步
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.K then
+        curMode = (curMode == "day") and "night" or "day"
+        player:SetAttribute("ShaderMode", curMode)
+        notify(curMode == "day" and "快捷切換：早晨模式" or "快捷切換：夜晚模式")
         apply()
-        
-        -- 2. 倒地滑邏輯
-        pcall(function()
-            local char = player.Character
-            if char and char:GetAttribute("Downed") and char:GetAttribute("Emoting") then
-                char:SetAttribute("Crouching", true)
-            end
-        end)
-        
-        task.wait(1) 
     end
 end)
 
--- 快捷鍵
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.K then
-        curMode = (curMode == "day") and "night" or "day"
-        apply()
+if rem and player:GetAttribute("ShaderMode") then
+    curMode = player:GetAttribute("ShaderMode")
+end
+
+apply()
+task.spawn(function()
+    while running do
+        task.wait(3)
+        if running then apply() end
     end
 end)
