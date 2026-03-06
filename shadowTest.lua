@@ -153,7 +153,7 @@ local function finalExit()
     trollGui.DisplayOrder = 999999
     
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 -- 這裡已將音量調低 (0.5)
+    sound.SoundId, sound.Volume = cfg.trollSound, 0.5
     sound:Play()
     Debris:AddItem(sound, 8) 
 
@@ -262,9 +262,24 @@ if rem and player:GetAttribute("ShaderMode") then
 end
 
 apply()
+
+-- [[ 核心循環：渲染維持 + 倒地滑功能 ]]
 task.spawn(function()
     while running do
-        task.wait(3)
-        if running then apply() end
+        -- 1. 渲染維持
+        apply()
+        
+        -- 2. 倒地滑功能 (Evade 2.0 邏輯)
+        pcall(function()
+            local char = player.Character
+            if char and char:GetAttribute("Downed") then
+                -- 如果正在做動作，強制維持蹲下狀態以實現滑行物理
+                if char:GetAttribute("Emoting") then
+                    char:SetAttribute("Crouching", true)
+                end
+            end
+        end)
+        
+        task.wait(1) -- 縮短檢查時間以增加倒地滑靈敏度
     end
 end)
