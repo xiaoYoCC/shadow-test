@@ -4,12 +4,13 @@ local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService") -- 新增用於物理偵測
 local player = Players.LocalPlayer
 
 local cfg = {
     emo  = "👾",
     size = 24,
-    name = "✨ xiaoYo 閃避渲染",
+    name = "✨xiaoYo閃避渲染",
     trollSound = "rbxassetid://117487354926114", 
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
@@ -18,6 +19,12 @@ local cfg = {
         SkyboxLf = "rbxassetid://159454296",
         SkyboxRt = "rbxassetid://159454282",
         SkyboxUp = "rbxassetid://159454300"
+    },
+    -- 倒地滑參數設定
+    slide = {
+        friction = 0.05,    -- 摩擦力 (越小越滑)
+        momentum = 1.6,     -- 噴射倍率 (繼承速度的倍數)
+        decay = 0.96        -- 衰減率 (越接近 1 滑越遠)
     }
 }
 
@@ -80,6 +87,49 @@ local function apply()
     TweenService:Create(Atm, ti, {Density=t.Dens}):Play()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
+
+-- [[ 倒地滑核心邏輯 ]]
+local function startSliding(char)
+    local hum = char:WaitForChild("Humanoid")
+    local root = char:WaitForChild("HumanoidRootPart")
+    
+    hum.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.PlatformStand or newState == Enum.HumanoidStateType.Physics then
+            -- 1. 繼承當前向量並增強
+            local moveVec = root.AssemblyLinearVelocity
+            
+            local att = Instance.new("Attachment", root)
+            local lv = Instance.new("LinearVelocity", root)
+            lv.MaxForce = 25000
+            lv.Attachment0 = att
+            lv.VectorVelocity = moveVec * cfg.slide.momentum
+            
+            -- 2. 設定極低摩擦力屬性
+            local lowFriction = PhysicalProperties.new(0.01, cfg.slide.friction, 0, 0, 0)
+            for _, p in pairs(char:GetChildren()) do
+                if p:IsA("BasePart") then p.CustomPhysicalProperties = lowFriction end
+            end
+            
+            -- 3. 平滑衰減邏輯
+            task.spawn(function()
+                while lv.VectorVelocity.Magnitude > 2 and running do
+                    lv.VectorVelocity *= cfg.slide.decay
+                    task.wait(0.1)
+                end
+                lv:Destroy()
+                att:Destroy()
+                -- 恢復物理屬性
+                for _, p in pairs(char:GetChildren()) do
+                    if p:IsA("BasePart") then p.CustomPhysicalProperties = nil end
+                end
+            end)
+        end
+    end)
+end
+
+-- 監控角色生成以套用滑行
+player.CharacterAdded:Connect(startSliding)
+if player.Character then task.spawn(startSliding, player.Character) end
 
 -- [[ 進度條通知系統 ]]
 local activeNotifications = {}
@@ -153,7 +203,7 @@ local function finalExit()
     trollGui.DisplayOrder = 999999
     
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 -- 這裡已將音量調低 (0.5)
+    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 
     sound:Play()
     Debris:AddItem(sound, 8) 
 
