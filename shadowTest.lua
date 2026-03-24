@@ -3,14 +3,15 @@ local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 local Debris = game:GetService("Debris")
-local RunService = game:GetService("RunService") -- 新增用於物理偵測
 local player = Players.LocalPlayer
 
 local cfg = {
     emo  = "👾",
     size = 24,
-    name = "✨xiaoYo閃避渲染",
+    name = "✨ xiaoYo 閃避渲染",
     trollSound = "rbxassetid://117487354926114", 
     milkyWay = {
         SkyboxBk = "rbxassetid://159454299",
@@ -19,12 +20,6 @@ local cfg = {
         SkyboxLf = "rbxassetid://159454296",
         SkyboxRt = "rbxassetid://159454282",
         SkyboxUp = "rbxassetid://159454300"
-    },
-    -- 倒地滑參數設定
-    slide = {
-        friction = 0.05,    -- 摩擦力 (越小越滑)
-        momentum = 1.6,     -- 噴射倍率 (繼承速度的倍數)
-        decay = 0.96        -- 衰減率 (越接近 1 滑越遠)
     }
 }
 
@@ -79,7 +74,6 @@ local function apply()
     }
 
     local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    
     Lighting.Ambient = t.Amb
     Lighting.OutdoorAmbient = t.Amb
     TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
@@ -88,50 +82,7 @@ local function apply()
     TweenService:Create(Bloom, ti, {Intensity=0.5, Threshold=0.8}):Play()
 end
 
--- [[ 倒地滑核心邏輯 ]]
-local function startSliding(char)
-    local hum = char:WaitForChild("Humanoid")
-    local root = char:WaitForChild("HumanoidRootPart")
-    
-    hum.StateChanged:Connect(function(_, newState)
-        if newState == Enum.HumanoidStateType.PlatformStand or newState == Enum.HumanoidStateType.Physics then
-            -- 1. 繼承當前向量並增強
-            local moveVec = root.AssemblyLinearVelocity
-            
-            local att = Instance.new("Attachment", root)
-            local lv = Instance.new("LinearVelocity", root)
-            lv.MaxForce = 25000
-            lv.Attachment0 = att
-            lv.VectorVelocity = moveVec * cfg.slide.momentum
-            
-            -- 2. 設定極低摩擦力屬性
-            local lowFriction = PhysicalProperties.new(0.01, cfg.slide.friction, 0, 0, 0)
-            for _, p in pairs(char:GetChildren()) do
-                if p:IsA("BasePart") then p.CustomPhysicalProperties = lowFriction end
-            end
-            
-            -- 3. 平滑衰減邏輯
-            task.spawn(function()
-                while lv.VectorVelocity.Magnitude > 2 and running do
-                    lv.VectorVelocity *= cfg.slide.decay
-                    task.wait(0.1)
-                end
-                lv:Destroy()
-                att:Destroy()
-                -- 恢復物理屬性
-                for _, p in pairs(char:GetChildren()) do
-                    if p:IsA("BasePart") then p.CustomPhysicalProperties = nil end
-                end
-            end)
-        end
-    end)
-end
-
--- 監控角色生成以套用滑行
-player.CharacterAdded:Connect(startSliding)
-if player.Character then task.spawn(startSliding, player.Character) end
-
--- [[ 進度條通知系統 ]]
+-- [[ 通知與排版系統 ]]
 local activeNotifications = {}
 local function updatePos()
     for i, v in ipairs(activeNotifications) do
@@ -165,7 +116,6 @@ local function notify(msg)
     updatePos()
 
     TweenService:Create(bar, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)}):Play()
-    
     task.delay(2.5, function()
         for i, v in ipairs(activeNotifications) do if v == nF then table.remove(activeNotifications, i) break end end
         nF:TweenPosition(UDim2.new(1, 50, nF.Position.Y.Scale, nF.Position.Y.Offset), "In", "Quart", 0.3, true)
@@ -173,9 +123,55 @@ local function notify(msg)
     end)
 end
 
--- [[ 主 UI ]]
+-- [[ 伺服器跳轉核心邏輯 ]]
+local req = (syn and syn.request) or (http and http.request) or http_request or request
+local function jumpToServer(regionName, minPing, maxPing)
+    if not req then
+        notify("❌ 你的執行器不支援伺服器跳轉")
+        return
+    end
+    notify("🔍 尋找" .. regionName .. "伺服器中...")
+    
+    task.spawn(function()
+        local url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"
+        local success, response = pcall(function()
+            return req({Url = url, Method = "GET"})
+        end)
+
+        if success and response and response.Success then
+            local data = HttpService:JSONDecode(response.Body)
+            local targetServerId = nil
+            local bestPing = 9999
+
+            if data and data.data then
+                for _, srv in ipairs(data.data) do
+                    if srv.playing < srv.maxPlayers then
+                        local ping = srv.ping or 9999
+                        if ping >= minPing and ping <= maxPing and ping < bestPing then
+                            bestPing = ping
+                            targetServerId = srv.id
+                        end
+                    end
+                end
+            end
+
+            if targetServerId then
+                notify("🚀 找到最佳伺服器！準備傳送...")
+                task.wait(1)
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, player)
+            else
+                notify("❌ 目前沒有符合的" .. regionName .. "伺服器")
+            end
+        else
+            notify("❌ API 請求失敗，請稍後重試")
+        end
+    end)
+end
+
+-- [[ 主 UI 構建 ]]
 local frame = Instance.new("Frame", sg)
-frame.Size, frame.Position = UDim2.new(0, 250, 0, 210), UDim2.new(0.5, -125, 0.5, -105)
+-- 稍微拉高 Frame (從 210 -> 260) 以容納第四顆按鈕
+frame.Size, frame.Position = UDim2.new(0, 250, 0, 260), UDim2.new(0.5, -125, 0.5, -130)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.25
 frame.Active, frame.Draggable = true, true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,20)
@@ -194,39 +190,60 @@ res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 關閉功能與 🗿 動畫 ]]
+-- [[ 子選單系統 (區域選擇與關閉確認) ]]
+local function openRegionUI()
+    if sg:FindFirstChild("RegionUI") then return end
+    local rF = Instance.new("Frame", sg)
+    rF.Name, rF.Size, rF.Position = "RegionUI", UDim2.new(0, 240, 0, 240), UDim2.new(0.5, -120, 0.5, -120)
+    rF.BackgroundColor3, rF.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.1
+    rF.ZIndex = 100
+    Instance.new("UICorner", rF).CornerRadius = UDim.new(0,15)
+    Instance.new("UIStroke", rF).Color = Color3.fromRGB(200,160,255)
+
+    local msg = Instance.new("TextLabel", rF)
+    msg.Size, msg.Position, msg.BackgroundTransparency = UDim2.new(1,0,0,40), UDim2.new(0,0,0,10), 1
+    msg.Text, msg.TextColor3, msg.Font, msg.TextSize = "選擇目標伺服器區域", Color3.new(1,1,1), Enum.Font.GothamBold, 16
+    msg.ZIndex = 101
+
+    local function makeRBtn(txt, yPos, col, cb)
+        local b = Instance.new("TextButton", rF)
+        b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.85,0,0,35), UDim2.new(0.075,0,0,yPos), txt, col
+        b.TextColor3, b.Font, b.TextSize, b.ZIndex = Color3.new(1,1,1), Enum.Font.GothamMedium, 14, 102
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+        b.MouseButton1Click:Connect(function()
+            rF:Destroy()
+            if cb then cb() end
+        end)
+    end
+
+    makeRBtn("🌏 亞洲區 (低延遲)", 55, Color3.fromRGB(80,160,100), function() jumpToServer("亞洲", 0, 120) end)
+    makeRBtn("🦅 美洲區 (中延遲)", 100, Color3.fromRGB(180,120,50), function() jumpToServer("美洲", 130, 220) end)
+    makeRBtn("🌍 歐洲區 (高延遲)", 145, Color3.fromRGB(100,100,180), function() jumpToServer("歐洲", 221, 9999) end)
+    makeRBtn("❌ 取消", 190, Color3.fromRGB(60,60,60), nil)
+end
+
 local function finalExit()
     running = false
     sg.Enabled = false 
-    
-    local trollGui = Instance.new("ScreenGui", pGui)
-    trollGui.DisplayOrder = 999999
-    
+    local tGui = Instance.new("ScreenGui", pGui)
+    tGui.DisplayOrder = 999999
     local sound = Instance.new("Sound", SoundService)
     sound.SoundId, sound.Volume = cfg.trollSound, 0.5 
     sound:Play()
     Debris:AddItem(sound, 8) 
-
-    local moai = Instance.new("TextLabel", trollGui)
+    local moai = Instance.new("TextLabel", tGui)
     moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
     moai.BackgroundTransparency, moai.Text = 1, "🗿"
     moai.TextSize, moai.TextColor3 = 250, Color3.new(1,1,1)
     moai.Font = Enum.Font.GothamBold
-    
-    local ti = TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(moai, ti, {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
-    
-    task.wait(2)
-    trollGui:Destroy()
-    sg:Destroy()
-    script:Destroy()
+    TweenService:Create(moai, TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
+    task.wait(2) tGui:Destroy() sg:Destroy() script:Destroy()
 end
 
 local function openConfirmUI()
     if sg:FindFirstChild("ConfirmUI") then return end
     local cF = Instance.new("Frame", sg)
-    cF.Name = "ConfirmUI"
-    cF.Size, cF.Position = UDim2.new(0, 240, 0, 180), UDim2.new(0.5, -120, 0.5, -90)
+    cF.Name, cF.Size, cF.Position = "ConfirmUI", UDim2.new(0, 240, 0, 180), UDim2.new(0.5, -120, 0.5, -90)
     cF.BackgroundColor3, cF.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.1
     cF.ZIndex = 100
     Instance.new("UICorner", cF).CornerRadius = UDim.new(0,15)
@@ -248,7 +265,7 @@ local function openConfirmUI()
     makeBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
 end
 
--- [[ 交互邏輯 ]]
+-- [[ UI 互動邏輯 ]]
 local dragStartPos = nil
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 res.MouseButton1Up:Connect(function()
@@ -282,39 +299,44 @@ local function mainBtn(txt,col,pos,cb)
     return b
 end
 
-mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.24,0), function()
+mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.20,0), function()
     curMode = "day"; player:SetAttribute("ShaderMode", "day"); notify("成功套用：早晨模式"); apply()
 end)
-mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.45,0), function()
+mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.38,0), function()
     curMode = "night"; player:SetAttribute("ShaderMode", "night"); notify("成功套用：夜晚模式"); apply()
 end)
 
 local mBtn
-mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.72,0), function()
+mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.56,0), function()
     rem = not rem; player:SetAttribute("ShaderRemember", rem)
     mBtn.Text = rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF"
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
     notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.K then
-        curMode = (curMode == "day") and "night" or "day"
-        player:SetAttribute("ShaderMode", curMode)
-        notify(curMode == "day" and "快捷切換：早晨模式" or "快捷切換：夜晚模式")
-        apply()
-    end
-end)
+-- 新增的區域切換按鈕
+mainBtn("🌐 伺服器區域切換", Color3.fromRGB(70,130,180), UDim2.new(0.06,0,0.74,0), openRegionUI)
 
-if rem and player:GetAttribute("ShaderMode") then
-    curMode = player:GetAttribute("ShaderMode")
-end
-
+-- [[ 核心循環與按鍵監聽 ]]
 apply()
 task.spawn(function()
     while running do
-        task.wait(3)
-        if running then apply() end
+        apply()
+        pcall(function()
+            local char = player.Character
+            if char and char:GetAttribute("Downed") and char:GetAttribute("Emoting") then
+                char:SetAttribute("Crouching", true)
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
+            end
+        end)
+        task.wait(0.1) 
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.K then
+        curMode = (curMode == "day") and "night" or "day"
+        apply()
     end
 end)
