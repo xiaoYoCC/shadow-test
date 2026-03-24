@@ -130,7 +130,7 @@ local function jumpToServer(regionName, minPing, maxPing)
         notify("❌ 你的執行器不支援伺服器跳轉")
         return
     end
-    notify("🔍 尋找" .. regionName .. "伺服器中...")
+    notify("🔍 尋找 " .. regionName .. " 伺服器中...")
     
     task.spawn(function()
         local url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"
@@ -160,7 +160,7 @@ local function jumpToServer(regionName, minPing, maxPing)
                 task.wait(1)
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, player)
             else
-                notify("❌ 目前沒有符合的" .. regionName .. "伺服器")
+                notify("❌ 目前沒有符合的 " .. regionName .. " 伺服器 (請稍後再試)")
             end
         else
             notify("❌ API 請求失敗，請稍後重試")
@@ -170,7 +170,6 @@ end
 
 -- [[ 主 UI 構建 ]]
 local frame = Instance.new("Frame", sg)
--- 稍微拉高 Frame (從 210 -> 260) 以容納第四顆按鈕
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 260), UDim2.new(0.5, -125, 0.5, -130)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.25
 frame.Active, frame.Draggable = true, true
@@ -216,7 +215,8 @@ local function openRegionUI()
         end)
     end
 
-    makeRBtn("🌏 亞洲區 (低延遲)", 55, Color3.fromRGB(80,160,100), function() jumpToServer("亞洲", 0, 120) end)
+    -- 將原本的亞洲改為日本，並將 Ping 上限壓到 85
+    makeRBtn("🌸 日本服 (極低延遲)", 55, Color3.fromRGB(80,160,100), function() jumpToServer("日本", 0, 85) end)
     makeRBtn("🦅 美洲區 (中延遲)", 100, Color3.fromRGB(180,120,50), function() jumpToServer("美洲", 130, 220) end)
     makeRBtn("🌍 歐洲區 (高延遲)", 145, Color3.fromRGB(100,100,180), function() jumpToServer("歐洲", 221, 9999) end)
     makeRBtn("❌ 取消", 190, Color3.fromRGB(60,60,60), nil)
@@ -314,7 +314,6 @@ mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem 
     notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
 
--- 新增的區域切換按鈕
 mainBtn("🌐 伺服器區域切換", Color3.fromRGB(70,130,180), UDim2.new(0.06,0,0.74,0), openRegionUI)
 
 -- [[ 核心循環與按鍵監聽 ]]
