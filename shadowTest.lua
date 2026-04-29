@@ -114,13 +114,17 @@ local function apply()
         Dens=0.05, Amb=Color3.fromRGB(40,40,55), DofE=true, SunI=0, Blm=1.2
     }
 
-    local ti = TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    Lighting.ClockTime = t.CT
+    Lighting.Brightness = t.B
+    Lighting.ExposureCompensation = t.E
     Lighting.Ambient = t.Amb
     Lighting.OutdoorAmbient = t.Amb
-    TweenService:Create(Lighting, ti, {ClockTime=t.CT, Brightness=t.B, ExposureCompensation=t.E}):Play()
-    TweenService:Create(CC, ti, {Contrast=t.C, Saturation=t.S, TintColor=t.Tint}):Play()
-    TweenService:Create(Atm, ti, {Density=t.Dens}):Play()
-    TweenService:Create(Bloom, ti, {Intensity=t.Blm, Threshold=0.8}):Play()
+    
+    CC.Contrast = t.C
+    CC.Saturation = t.S
+    CC.TintColor = t.Tint
+    Atm.Density = t.Dens
+    Bloom.Intensity = t.Blm
     
     DOF.Enabled = t.DofE
     DOF.FarIntensity = 0.4
@@ -143,7 +147,7 @@ RunService.RenderStepped:Connect(function(dt)
     if math.random() < 0.01 then spawnMeteor() end
 end)
 
--- [[ 通知系統 (維持你原本的設定) ]]
+-- [[ 通知系統 (維持 0.8 位置) ]]
 local activeNotifications = {}
 local function updatePos()
     for i, v in ipairs(activeNotifications) do
@@ -205,17 +209,14 @@ local function jumpToJapan()
                 end
             end
             if target then 
-                notify("🚀 找到極低延遲節點，準備傳送...")
-                task.wait(0.5)
+                notify("🚀 找到低延遲節點，傳送中..."); task.wait(0.5)
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, target, player)
-            else 
-                notify("❌ 目前無符合條件的日本節點") 
-            end
+            else notify("❌ 目前無符合的日本節點") end
         end
     end)
 end
 
--- [[ 主 UI (保留你原本設定，僅高度微調至260以容納第四顆按鈕) ]]
+-- [[ 主 UI (保留 250x260 與所有樣式) ]]
 local frame = Instance.new("Frame", sg)
 frame.Size, frame.Position = UDim2.new(0, 250, 0, 260), UDim2.new(0.5, -125, 0.5, -130)
 frame.BackgroundColor3, frame.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.25
@@ -230,67 +231,46 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 
 local res = Instance.new("TextButton", sg)
 res.Size, res.Visible, res.Text = UDim2.new(0,50,0,50), false, cfg.emo
-res.BackgroundColor3, res.BackgroundTransparency = Color3.fromRGB(20,20,20), 0.2
-res.TextColor3, res.TextSize = Color3.new(1,1,1), cfg.size
+res.BackgroundColor3, res.BackgroundTransparency, res.TextColor3, res.TextSize = Color3.fromRGB(20,20,20), 0.2, Color3.new(1,1,1), cfg.size
 res.Draggable = true
 Instance.new("UICorner", res).CornerRadius = UDim.new(1,0)
 Instance.new("UIStroke", res).Color = Color3.fromRGB(200,160,255)
 
--- [[ 關閉功能與 確認畫面 ]]
+-- [[ 關閉功能 ]]
 local function finalExit()
     running = false
     sg.Enabled = false 
-    
-    local trollGui = Instance.new("ScreenGui", pGui)
-    trollGui.DisplayOrder = 999999
-    
+    local tGui = Instance.new("ScreenGui", pGui)
+    tGui.DisplayOrder = 999999
     local sound = Instance.new("Sound", SoundService)
-    sound.SoundId, sound.Volume = cfg.trollSound, 0.5 
-    sound:Play()
-    Debris:AddItem(sound, 8) 
-
-    local moai = Instance.new("TextLabel", trollGui)
-    moai.Size, moai.Position = UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200)
-    moai.BackgroundTransparency, moai.Text = 1, "🗿"
-    moai.TextSize, moai.TextColor3 = 250, Color3.new(1,1,1)
-    moai.Font = Enum.Font.GothamBold
-    
-    local ti = TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(moai, ti, {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
-    
-    task.wait(2)
-    trollGui:Destroy()
-    sg:Destroy()
-    script:Destroy()
+    sound.SoundId, sound.Volume = cfg.trollSound, 0.5; sound:Play()
+    local moai = Instance.new("TextLabel", tGui)
+    moai.Size, moai.Position, moai.Text = UDim2.new(0,400,0,400), UDim2.new(0.5,-200,0.5,-200), "🗿"
+    moai.BackgroundTransparency, moai.TextSize, moai.TextColor3, moai.Font = 1, 250, Color3.new(1,1,1), Enum.Font.GothamBold
+    TweenService:Create(moai, TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {TextTransparency = 1, Position = UDim2.new(0.5, -200, 0.3, -200)}):Play()
+    task.wait(2); tGui:Destroy(); sg:Destroy(); script:Destroy()
 end
 
 local function openConfirmUI()
     if sg:FindFirstChild("ConfirmUI") then return end
     local cF = Instance.new("Frame", sg)
-    cF.Name = "ConfirmUI"
-    cF.Size, cF.Position = UDim2.new(0, 240, 0, 180), UDim2.new(0.5, -120, 0.5, -90)
+    cF.Name, cF.Size, cF.Position = "ConfirmUI", UDim2.new(0, 240, 0, 180), UDim2.new(0.5, -120, 0.5, -90)
     cF.BackgroundColor3, cF.BackgroundTransparency = Color3.fromRGB(15,15,15), 0.1
-    cF.ZIndex = 100
-    Instance.new("UICorner", cF).CornerRadius = UDim.new(0,15)
-    Instance.new("UIStroke", cF).Color = Color3.fromRGB(200,160,255)
-
+    Instance.new("UICorner", cF); Instance.new("UIStroke", cF).Color = Color3.fromRGB(200,160,255)
     local msg = Instance.new("TextLabel", cF)
-    msg.Size, msg.Position, msg.BackgroundTransparency = UDim2.new(1,0,0,80), UDim2.new(0,0,0,10), 1
-    msg.Text, msg.TextColor3, msg.Font, msg.TextSize = "確定要關閉渲染嗎？", Color3.new(1,1,1), Enum.Font.GothamBold, 16
-    msg.ZIndex = 101
-
-    local function makeBtn(txt, col, pos, cb)
+    msg.Size, msg.Position, msg.Text = UDim2.new(1,0,0,80), UDim2.new(0,0,0,10), "確定要關閉渲染嗎？"
+    msg.TextColor3, msg.Font, msg.TextSize, msg.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamBold, 16, 1
+    local function mkB(t, c, p, f)
         local b = Instance.new("TextButton", cF)
-        b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,80,0,35), pos, txt, col
-        b.TextColor3, b.Font, b.TextSize, b.ZIndex = Color3.new(1,1,1), Enum.Font.GothamMedium, 14, 102
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-        b.MouseButton1Click:Connect(cb)
+        b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,80,0,35), p, t, c
+        b.TextColor3, b.Font, b.TextSize = Color3.new(1,1,1), Enum.Font.GothamMedium, 14
+        Instance.new("UICorner", b); b.MouseButton1Click:Connect(f)
     end
-    makeBtn("取消", Color3.fromRGB(60,60,60), UDim2.new(0.1,0,0.65,0), function() cF:Destroy() end)
-    makeBtn("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
+    mkB("取消", Color3.fromRGB(60,60,60), UDim2.new(0.1,0,0.65,0), function() cF:Destroy() end)
+    mkB("關閉", Color3.fromRGB(150,50,50), UDim2.new(0.55,0,0.65,0), finalExit)
 end
 
--- [[ 交互邏輯 ]]
+-- [[ 交互與按鈕排列 ]]
 local dragStartPos = nil
 res.MouseButton1Down:Connect(function() dragStartPos = res.AbsolutePosition end)
 res.MouseButton1Up:Connect(function()
@@ -305,13 +285,11 @@ local function headBtn(txt, pos, col, cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0,24,0,24), pos, txt, col
     b.TextColor3, b.Font = Color3.new(1,1,1), Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-    b.MouseButton1Click:Connect(cb)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6); b.MouseButton1Click:Connect(cb)
 end
 headBtn("-", UDim2.new(1,-65,0,8), Color3.fromRGB(60,60,60), function()
     res.Position = UDim2.new(0, frame.AbsolutePosition.X - 50, 0, frame.AbsolutePosition.Y)
-    frame.Visible, res.Visible = false, true
-    notify("選單已縮小")
+    frame.Visible, res.Visible = false, true; notify("選單已縮小")
 end)
 headBtn("×", UDim2.new(1,-32,0,8), Color3.fromRGB(150,50,50), openConfirmUI)
 
@@ -319,19 +297,16 @@ local function mainBtn(txt,col,pos,cb)
     local b = Instance.new("TextButton", frame)
     b.Size, b.Position, b.Text, b.BackgroundColor3 = UDim2.new(0.88,0,0,38), pos, txt, col
     b.TextColor3, b.Font, b.BackgroundTransparency = Color3.new(1,1,1), Enum.Font.GothamMedium, 0.2
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
-    b.MouseButton1Click:Connect(cb)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10); b.MouseButton1Click:Connect(cb)
     return b
 end
 
--- 四個主按鈕精準排列
 mainBtn("☀ 早晨模式", Color3.fromRGB(100,170,255), UDim2.new(0.06,0,0.20,0), function()
-    curMode = "day"; player:SetAttribute("ShaderMode", "day"); notify("成功套用：早晨模式"); apply()
+    curMode = "day"; player:SetAttribute("ShaderMode", "day"); apply(); notify("成功套用：早晨模式")
 end)
 mainBtn("🌌 夜晚模式", Color3.fromRGB(140,90,255), UDim2.new(0.06,0,0.38,0), function()
-    curMode = "night"; player:SetAttribute("ShaderMode", "night"); notify("成功套用：夜晚模式"); apply()
+    curMode = "night"; player:SetAttribute("ShaderMode", "night"); apply(); notify("成功套用：夜晚模式")
 end)
-
 local mBtn
 mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100), UDim2.new(0.06,0,0.56,0), function()
     rem = not rem; player:SetAttribute("ShaderRemember", rem)
@@ -339,7 +314,6 @@ mBtn = mainBtn(rem and "💾 儲存模式: ON" or "💾 儲存模式: OFF", rem 
     mBtn.BackgroundColor3 = rem and Color3.fromRGB(80,160,100) or Color3.fromRGB(100,100,100)
     notify(rem and "儲存模式：已開啟" or "儲存模式：已關閉")
 end)
-
 mainBtn("🌸 強制跳轉日本服", Color3.fromRGB(80,160,100), UDim2.new(0.06,0,0.74,0), jumpToJapan)
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -347,25 +321,23 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.K then
         curMode = (curMode == "day") and "night" or "day"
         player:SetAttribute("ShaderMode", curMode)
-        notify(curMode == "day" and "快捷切換：早晨模式" or "快捷切換：夜晚模式")
-        apply()
+        apply(); notify(curMode == "day" and "快捷切換：早晨模式" or "快捷切換：夜晚模式")
     end
 end)
 
-if rem and player:GetAttribute("ShaderMode") then
-    curMode = player:GetAttribute("ShaderMode")
-end
-
--- [[ 循環保護與滑行邏輯 ]]
+-- [[ 核心高頻刷新循環 ]]
 apply()
 task.spawn(function()
     while running do
+        -- 每 0.1 秒強制刷新一次渲染與天空，防止被地圖拉回
+        apply()
+        
         pcall(function()
             local char = player.Character
             if char and char:GetAttribute("Downed") and char:GetAttribute("Emoting") then
                 char:SetAttribute("Crouching", true)
             end
         end)
-        task.wait(0.1) -- 加快滑行判定頻率
+        task.wait(0.1) 
     end
 end)
